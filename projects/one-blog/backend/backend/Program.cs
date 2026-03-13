@@ -50,15 +50,29 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Add Database Context
+// Add Database Context with auto-fallback to SQLite
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<BlogDbContext>(options =>
 {
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        npgsqlOptions =>
+    if (string.IsNullOrEmpty(connectionString) || 
+        connectionString.Contains(":memory:") || 
+        connectionString.EndsWith(".db", StringComparison.OrdinalIgnoreCase) ||
+        connectionString.EndsWith(".sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        // Use SQLite for in-memory or file-based databases
+        var sqliteConnection = string.IsNullOrEmpty(connectionString) ? "DataSource=blog.db" : connectionString;
+        options.UseSqlite(sqliteConnection);
+        builder.Configuration["DatabaseProvider"] = "SQLite";
+    }
+    else
+    {
+        // Use PostgreSQL for production connections
+        options.UseNpgsql(connectionString, npgsqlOptions =>
         {
             npgsqlOptions.MigrationsAssembly("DotnetBlog");
         });
+        builder.Configuration["DatabaseProvider"] = "PostgreSQL";
+    }
 });
 
 // Add JWT Authentication
@@ -99,9 +113,35 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Add MemoryCache (always available for fallback)
+builder.Services.AddMemoryCache();
+
+// Configure Cache Service with Redis or Memory fallback
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    try
+    {
+        var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+        builder.Configuration["CacheProvider"] = "Redis";
+    }
+    catch (Exception ex)
+    {
+        builder.Configuration["CacheProvider"] = "Memory (Redis failed)";
+        builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+    }
+}
+else
+{
+    builder.Configuration["CacheProvider"] = "Memory";
+    builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+}
+
 // Register custom services
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAuthService, IAuthService>();
 
 var app = builder.Build();
 
