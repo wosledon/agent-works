@@ -35,7 +35,7 @@ interface BlogState {
   setCurrentPage: (page: number) => void;
   
   // 文章操作
-  createPost: (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt' | 'viewCount' | 'likeCount'>) => Post;
+  createPost: (post: Omit<Post, 'id' | 'viewCount' | 'likeCount'> & { publishedAt?: string; updatedAt?: string }) => Post;
   updatePost: (id: string, updates: Partial<Post>) => void;
   deletePost: (id: string) => void;
   likePost: (id: string) => void;

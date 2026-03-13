@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Markdown Editor 样式 */
+@import '@uiw/react-md-editor/markdown-editor.css';
+@import '@uiw/react-markdown-preview/markdown.css';
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -37,4 +41,79 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+/* Markdown Editor 自定义样式 */
+.w-md-editor {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.w-md-editor-content {
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+}
+
+.w-md-editor-text-pre > code,
+.w-md-editor-text-input {
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+}
+
+.w-md-editor-preview {
+  padding: 16px !important;
+}
+
+/* Prose 样式覆盖 */
+.prose pre {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.prose code {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* 行数限制 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

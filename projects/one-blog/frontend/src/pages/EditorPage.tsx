@@ -11,7 +11,7 @@ export function EditorPage() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuthStore();
-  const { posts, tags, createPost, updatePost, getPostBySlug } = useBlogStore();
+  const { tags, createPost, updatePost, getPostBySlug } = useBlogStore();
 
   const isEditing = !!slug;
   const existingPost = slug ? getPostBySlug(slug) : null;
@@ -45,7 +45,7 @@ export function EditorPage() {
 
   // 自动从内容生成摘要
   const generateExcerpt = (text: string) => {
-    const plainText = text.replace(/[#*\`\[\]\(\)]/g, '');
+    const plainText = text.replace(/[#*`,[\]()]/g, '');
     return plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
   };
 
@@ -74,6 +74,8 @@ export function EditorPage() {
         avatar: user?.avatar,
       },
       tags: tags.filter((t) => selectedTags.includes(t.id)),
+      publishedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {
@@ -84,7 +86,7 @@ export function EditorPage() {
         const newPost = createPost(postData);
         navigate(`/post/${newPost.slug}`);
       }
-    } catch (error) {
+    } catch (_error) {
       alert('保存失败，请重试');
     } finally {
       setIsSaving(false);

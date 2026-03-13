@@ -4,13 +4,12 @@
 import { useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useBlogStore } from '../store';
-import { Search, Clock, Eye, Heart, Tag, ChevronRight } from 'lucide-react';
+import { Search, Eye, Heart, Tag } from 'lucide-react';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { tagSlug } = useParams();
   const {
-    posts,
     tags,
     searchQuery,
     selectedTag,
