@@ -1,0 +1,39 @@
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+
+# Visual Studio
+.vs/
+*.userprefs
+*.sln.docstates
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+packages/
+
+# Test Results
+TestResults/
+
+# Publish
+publish/
+wwwroot/
+
+# Config (keep templates)
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# OS
+.DS_Store
+Thumbs.db
