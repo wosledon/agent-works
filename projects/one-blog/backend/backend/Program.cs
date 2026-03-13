@@ -161,7 +161,13 @@ app.UseAuthorization();
 // Map endpoints
 app.MapGet("/", () => "DotnetBlog API is running!");
 
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new 
+{ 
+    status = "healthy", 
+    timestamp = DateTime.UtcNow,
+    databaseProvider = builder.Configuration["DatabaseProvider"],
+    cacheProvider = builder.Configuration["CacheProvider"]
+}));
 
 app.MapAuthEndpoints();
 app.MapPostEndpoints();  // Keep existing endpoints for backward compatibility
