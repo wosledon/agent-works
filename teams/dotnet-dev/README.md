@@ -32,6 +32,22 @@ Frontend ↔ Backend 并行开发 → QA 测试 → 验收上线
 4. **PM 整合撰写项目 `README.md`**
 5. PM 汇总里程碑到 `roadmap.md`
 
+## 截图流程（开发完成后）
+
+PM 在 README 中标记截图位置，Kimi 执行截图：
+
+```markdown
+<!-- PM 标注 --
+[SCREENSHOT:homepage]
+
+<!-- Kimi 执行后替换为 --
+![首页预览](./docs/screenshots/homepage.png)
+```
+
+**时机**: 项目开发完成，本地/部署可访问后
+**工具**: 无头浏览器 (Playwright)
+**存储**: `docs/screenshots/`
+
 ## 项目 README 模板
 
 每个项目的 `README.md` 由 **PM 统筹撰写**，整合各角色产出：

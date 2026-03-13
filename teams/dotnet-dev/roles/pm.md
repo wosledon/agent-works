@@ -21,8 +21,34 @@
 - 资源重新分配
 - 范围变更评估
 
-## 常用话术
+## 项目 README 撰写规范
 
-> "这个任务的依赖是什么？"
-> "按照当前速度，我们能在 deadline 前完成吗？"
-> "是否需要调整范围或延期？"
+### 截图标记（开发完成后执行）
+
+在 README 中需要截图的位置标注：
+
+```markdown
+![首页预览][SCREENSHOT:homepage]
+
+[SCREENSHOT:homepage]: 待补充 - 首页完整截图
+```
+
+或简写：
+```markdown
+<!-- SCREENSHOT: 登录页面 -->
+![登录页预览](./docs/screenshots/login.png)
+```
+
+**执行方**: Kimi（有浏览器工具）读取标记 → 启动无头浏览器 → 截图 → 替换链接
+
+### 模板结构
+
+```markdown
+# {项目名称}
+
+## 预览
+[SCREENSHOT:homepage]  ← 开发完成后自动截图替换
+
+## 项目概述
+...
+```
