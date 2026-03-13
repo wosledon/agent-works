@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: src/OneReport/Dockerfile
+    container_name: one-report-api
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=one_report;Username=postgres;Password=postgres;Pooling=true;MinPoolSize=5;MaxPoolSize=100;
+    depends_on:
+      - postgres
+    networks:
+      - one-report-network
+    volumes:
+      - exports:/app/wwwroot/exports
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: one-report-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=one_report
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - one-report-network
+
+networks:
+  one-report-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  exports:
