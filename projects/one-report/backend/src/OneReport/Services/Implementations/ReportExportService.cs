@@ -104,6 +104,7 @@ public class ReportExportService : IReportExportService
         var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
         
         var stream = new MemoryStream();
+        long recordCount = 0;
         
         // 使用 ClosedXML 创建 Excel，设置流式模式
         using (var workbook = new XLWorkbook())
@@ -121,7 +122,7 @@ public class ReportExportService : IReportExportService
 
             // 流式写入数据
             long rowIndex = 2;
-            long recordCount = 0;
+            recordCount = 0;
             
             await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
             {
