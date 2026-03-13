@@ -86,7 +86,7 @@ export function EditorPage() {
         const newPost = createPost(postData);
         navigate(`/post/${newPost.slug}`);
       }
-    } catch (_error) {
+    } catch {
       alert('保存失败，请重试');
     } finally {
       setIsSaving(false);
