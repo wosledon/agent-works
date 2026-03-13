@@ -127,7 +127,7 @@ if (!string.IsNullOrEmpty(redisConnectionString))
         builder.Services.AddSingleton<ICacheService, RedisCacheService>();
         builder.Configuration["CacheProvider"] = "Redis";
     }
-    catch (Exception ex)
+    catch
     {
         builder.Configuration["CacheProvider"] = "Memory (Redis failed)";
         builder.Services.AddSingleton<ICacheService, MemoryCacheService>();

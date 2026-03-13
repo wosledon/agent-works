@@ -106,7 +106,7 @@ public class ReportExportService : IReportExportService
         var stream = new MemoryStream();
         
         // 使用 ClosedXML 创建 Excel，设置流式模式
-        using (var workbook = new XLWorkbook(new LoadOptions { BufferSize = 4096 }))
+        using (var workbook = new XLWorkbook())
         {
             var worksheet = workbook.Worksheets.Add(report.Name);
             
