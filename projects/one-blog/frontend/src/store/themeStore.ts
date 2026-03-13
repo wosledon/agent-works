@@ -65,7 +65,7 @@ export const useThemeStore = create<ThemeState>()(
 // 初始化系统主题监听
 if (typeof window !== 'undefined') {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', (e) => {
+  mediaQuery.addEventListener('change', () => {
     const { theme } = useThemeStore.getState();
     if (theme === 'system') {
       useThemeStore.getState().setTheme('system');

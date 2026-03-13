@@ -41,6 +41,8 @@ export interface Comment {
   postId: string;
   parentId?: string;
   createdAt: string;
+  updatedAt?: string;
+  likeCount?: number;
 }
 
 // API 响应类型

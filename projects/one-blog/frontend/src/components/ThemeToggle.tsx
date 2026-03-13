@@ -14,7 +14,7 @@ const themes: { value: Theme; label: string; icon: typeof Sun }[] = [
 ];
 
 export function ThemeToggle() {
-  const { theme, setTheme, isDark, toggleTheme } = useThemeStore();
+  const { theme, setTheme, isDark } = useThemeStore();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -28,8 +28,6 @@ export function ThemeToggle() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const currentIcon = themes.find((t) => t.value === theme)?.icon || Sun;
 
   return (
     <div ref={containerRef} className="relative">
