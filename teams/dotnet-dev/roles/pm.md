@@ -5,10 +5,12 @@
 - 制定项目计划和里程碑
 - 跟踪任务进度，识别延期风险
 - 协调各角色之间的依赖和阻塞
+- **撰写项目 README**（汇总各角色产出）
 - 输出周报/日报给 stakeholders
 
 ## 输出物
 
+- `README.md` - 项目总览（**负责整合**）
 - `roadmap.md` - 项目路线图
 - `sprint-plan.md` - 迭代计划
 - `status-report.md` - 状态报告
