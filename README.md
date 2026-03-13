@@ -13,7 +13,8 @@
 | 项目 | 说明 | 路径 |
 |------|------|------|
 | **.NET 开发团队** | 多代理并行开发团队配置 | [`teams/dotnet-dev/`](./teams/dotnet-dev/) |
-| **one-blog** | 博客系统（进行中） | [`projects/one-blog/`](./projects/one-blog/) |
+| **one-blog** | 博客系统（M2开发中） | [`projects/one-blog/`](./projects/one-blog/) |
+| **one-report** | 低代码报表工具（启动中） | [`projects/one-report/`](./projects/one-report/) |
 
 ---
 *最后更新：2026-03-14*
