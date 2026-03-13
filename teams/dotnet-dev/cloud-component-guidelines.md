@@ -71,17 +71,33 @@ if (configuration.GetConnectionString("Redis") != null) {
 
 ### 4. 本地实现示例
 
-#### 内存缓存
+#### 内存缓存（使用 IMemoryCache）
 ```csharp
 public class MemoryCacheService : ICacheService {
-    private readonly ConcurrentDictionary<string, object> _cache = new();
+    private readonly IMemoryCache _cache;
+    
+    public MemoryCacheService(IMemoryCache cache) {
+        _cache = cache;
+    }
     
     public Task<T> GetAsync<T>(string key) {
-        _cache.TryGetValue(key, out var value);
-        return Task.FromResult((T)value);
+        var value = _cache.Get<T>(key);
+        return Task.FromResult(value);
     }
-    // ...
+    
+    public Task SetAsync<T>(string key, T value, TimeSpan? expiry = null) {
+        var options = new MemoryCacheEntryOptions();
+        if (expiry.HasValue) {
+            options.SetAbsoluteExpiration(expiry.Value);
+        }
+        _cache.Set(key, value, options);
+        return Task.CompletedTask;
+    }
 }
+
+// 注册
+services.AddMemoryCache();
+services.AddSingleton<ICacheService, MemoryCacheService>();
 ```
 
 #### Channel-based MQ
