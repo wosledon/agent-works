@@ -56,7 +56,7 @@ else
     
     var fullPath = Path.IsPathRooted(sqlitePath) 
         ? sqlitePath 
-        : Path.Combine(builder.Environment.ContentRootPath, sqlitePath);
+        : Path.Combine(builder.Environment.ContentRootPath, sqlitePath ?? "data/one-report.db");
     
     Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
     

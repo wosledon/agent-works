@@ -121,7 +121,7 @@ public class ReportExportService : IReportExportService
             }
 
             // 流式写入数据
-            long rowIndex = 2;
+            int rowIndex = 2;
             recordCount = 0;
             
             await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
