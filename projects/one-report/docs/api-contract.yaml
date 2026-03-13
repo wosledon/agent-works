@@ -1,0 +1,1483 @@
+openapi: 3.0.3
+info:
+  title: One-Report API
+  description: |
+    低代码报表平台 API
+    
+    特性：
+    - 报表设计与管理
+    - 流式数据导出（PDF/Excel/CSV）
+    - 多数据源支持
+    - 定时任务调度
+  version: 1.0.0
+  contact:
+    name: One-Report Team
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: 本地开发环境
+  - url: https://api.one-report.com/api/v1
+    description: 生产环境
+
+tags:
+  - name: Authentication
+    description: 认证相关
+  - name: Reports
+    description: 报表管理
+  - name: Data Sources
+    description: 数据源管理
+  - name: Export
+    description: 导出任务
+  - name: Query
+    description: 数据查询
+  - name: Scheduler
+    description: 定时任务
+
+paths:
+  # ==================== Authentication ====================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: 用户登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: 认证失败
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: 刷新 Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  # ==================== Reports ====================
+  /reports:
+    get:
+      tags: [Reports]
+      summary: 获取报表列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: keyword
+          in: query
+          description: 搜索关键词
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, archived]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResult_ReportSummary'
+
+    post:
+      tags: [Reports]
+      summary: 创建报表
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReportRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetail'
+
+  /reports/{reportId}:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Reports]
+      summary: 获取报表详情
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetail'
+        '404':
+          description: 报表不存在
+
+    put:
+      tags: [Reports]
+      summary: 更新报表
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReportRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetail'
+
+    delete:
+      tags: [Reports]
+      summary: 删除报表
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: 删除成功
+
+  /reports/{reportId}/preview:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Reports]
+      summary: 预览报表（获取前N条数据）
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  description: 报表参数
+                limit:
+                  type: integer
+                  default: 100
+                  maximum: 1000
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewData'
+
+  /reports/{reportId}/copy:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Reports]
+      summary: 复制报表
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: 复制成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDetail'
+
+  # ==================== Data Sources ====================
+  /data-sources:
+    get:
+      tags: [Data Sources]
+      summary: 获取数据源列表
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [postgresql, mysql, sqlserver, api, excel, csv]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataSourceSummary'
+
+    post:
+      tags: [Data Sources]
+      summary: 创建数据源
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDataSourceRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceDetail'
+
+  /data-sources/{dataSourceId}:
+    parameters:
+      - name: dataSourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Data Sources]
+      summary: 获取数据源详情
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceDetail'
+
+    put:
+      tags: [Data Sources]
+      summary: 更新数据源
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDataSourceRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags: [Data Sources]
+      summary: 删除数据源
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: 删除成功
+
+  /data-sources/{dataSourceId}/test:
+    parameters:
+      - name: dataSourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Data Sources]
+      summary: 测试数据源连接
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 连接成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  latencyMs:
+                    type: integer
+
+  /data-sources/{dataSourceId}/schema:
+    parameters:
+      - name: dataSourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Data Sources]
+      summary: 获取数据库结构
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: table
+          in: query
+          description: 指定表名（可选）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TableSchema'
+
+  /data-sources/{dataSourceId}/query:
+    parameters:
+      - name: dataSourceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Data Sources]
+      summary: 执行测试查询
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sql:
+                  type: string
+                  description: SQL 查询语句
+                limit:
+                  type: integer
+                  default: 100
+                  maximum: 1000
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+
+  # ==================== Export ====================
+  /exports:
+    post:
+      tags: [Export]
+      summary: 创建导出任务
+      description: |
+        创建异步导出任务，支持大文件流式导出。
+        返回任务ID用于后续查询进度和下载文件。
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExportRequest'
+      responses:
+        '202':
+          description: 任务已接受
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportTask'
+
+  /exports/stream:
+    post:
+      tags: [Export]
+      summary: 流式导出（直接下载）
+      description: |
+        小文件（< 10MB）可直接流式下载。
+        大文件建议使用异步任务接口。
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamExportRequest'
+      responses:
+        '200':
+          description: 导出文件流
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: 文件过大，已转为异步任务
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportTask'
+
+  /exports/{exportId}:
+    parameters:
+      - name: exportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Export]
+      summary: 获取导出任务状态
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportTaskDetail'
+
+  /exports/{exportId}/download:
+    parameters:
+      - name: exportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Export]
+      summary: 下载导出文件
+      description: 支持 Range 请求实现断点续传
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 文件流
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            Accept-Ranges:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /exports/{exportId}/cancel:
+    parameters:
+      - name: exportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Export]
+      summary: 取消导出任务
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 已取消
+
+  # ==================== Query ====================
+  /query/execute:
+    post:
+      tags: [Query]
+      summary: 执行报表查询
+      description: 获取报表数据，支持流式分页
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteQueryRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events 流式数据
+
+  /query/stream/{reportId}:
+    parameters:
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Query]
+      summary: 流式查询（SSE）
+      description: 使用 Server-Sent Events 实现实时数据推送
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: object
+      responses:
+        '200':
+          description: SSE 流
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # ==================== Scheduler ====================
+  /schedules:
+    get:
+      tags: [Scheduler]
+      summary: 获取定时任务列表
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleSummary'
+
+    post:
+      tags: [Scheduler]
+      summary: 创建定时任务
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDetail'
+
+  /schedules/{scheduleId}:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Scheduler]
+      summary: 获取定时任务详情
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDetail'
+
+    put:
+      tags: [Scheduler]
+      summary: 更新定时任务
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags: [Scheduler]
+      summary: 删除定时任务
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: 删除成功
+
+  /schedules/{scheduleId}/toggle:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Scheduler]
+      summary: 启用/禁用定时任务
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: 成功
+
+  /schedules/{scheduleId}/history:
+    parameters:
+      - name: scheduleId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Scheduler]
+      summary: 获取执行历史
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResult_ExecutionHistory'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ==================== Base Types ====================
+    PagedResult_ReportSummary:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSummary'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    PagedResult_ExecutionHistory:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionHistory'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    # ==================== Auth ====================
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: 过期时间（秒）
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+
+    # ==================== Reports ====================
+    ReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, archived]
+        dataSourceId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    ReportDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, published, archived]
+        config:
+          $ref: '#/components/schemas/ReportConfig'
+        dataSourceId:
+          type: string
+          format: uuid
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportParameter'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        version:
+          type: integer
+
+    ReportConfig:
+      type: object
+      properties:
+        layout:
+          type: object
+          description: 报表布局配置
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnConfig'
+        styles:
+          type: object
+          description: 样式配置
+        groups:
+          type: array
+          items:
+            type: string
+          description: 分组字段
+        aggregations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AggregationConfig'
+
+    ColumnConfig:
+      type: object
+      properties:
+        field:
+          type: string
+        title:
+          type: string
+        width:
+          type: number
+        format:
+          type: string
+          description: 数据格式（如：yyyy-MM-dd, #,##0.00）
+        align:
+          type: string
+          enum: [left, center, right]
+        visible:
+          type: boolean
+        sortable:
+          type: boolean
+        maskType:
+          type: string
+          enum: [none, phone, idCard, bankCard, email]
+          description: 数据脱敏类型
+
+    AggregationConfig:
+      type: object
+      properties:
+        field:
+          type: string
+        type:
+          type: string
+          enum: [sum, avg, count, min, max]
+        position:
+          type: string
+          enum: [group, total]
+
+    ReportParameter:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [string, number, date, datetime, boolean, select, multiSelect]
+        required:
+          type: boolean
+        defaultValue:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+
+    CreateReportRequest:
+      type: object
+      required: [name, dataSourceId]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        dataSourceId:
+          type: string
+          format: uuid
+        config:
+          $ref: '#/components/schemas/ReportConfig'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportParameter'
+
+    UpdateReportRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        status:
+          type: string
+          enum: [draft, published, archived]
+        config:
+          $ref: '#/components/schemas/ReportConfig'
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportParameter'
+
+    PreviewData:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              title:
+                type: string
+              type:
+                type: string
+        rows:
+          type: array
+          items:
+            type: object
+        totalCount:
+          type: integer
+          description: 预估总行数
+
+    # ==================== Data Sources ====================
+    DataSourceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [postgresql, mysql, sqlserver, api, excel, csv]
+        status:
+          type: string
+          enum: [active, inactive, error]
+        lastTestedAt:
+          type: string
+          format: date-time
+
+    DataSourceDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [postgresql, mysql, sqlserver, api, excel, csv]
+        config:
+          $ref: '#/components/schemas/DataSourceConfig'
+        status:
+          type: string
+          enum: [active, inactive, error]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DataSourceConfig:
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+        database:
+          type: string
+        username:
+          type: string
+        # 密码在响应中不返回
+        connectionString:
+          type: string
+          description: 完整连接字符串（加密存储）
+        apiEndpoint:
+          type: string
+        apiMethod:
+          type: string
+          enum: [GET, POST]
+        apiHeaders:
+          type: object
+        filePath:
+          type: string
+        options:
+          type: object
+          description: 额外配置选项
+
+    CreateDataSourceRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        type:
+          type: string
+          enum: [postgresql, mysql, sqlserver, api, excel, csv]
+        config:
+          $ref: '#/components/schemas/DataSourceConfig'
+        password:
+          type: string
+          format: password
+
+    UpdateDataSourceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        config:
+          $ref: '#/components/schemas/DataSourceConfig'
+        password:
+          type: string
+          format: password
+
+    TableSchema:
+      type: object
+      properties:
+        tableName:
+          type: string
+        tableComment:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnSchema'
+
+    ColumnSchema:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        length:
+          type: integer
+        nullable:
+          type: boolean
+        defaultValue:
+          type: string
+        comment:
+          type: string
+        isPrimaryKey:
+          type: boolean
+
+    QueryResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnSchema'
+        rows:
+          type: array
+          items:
+            type: object
+        rowCount:
+          type: integer
+        executionTimeMs:
+          type: integer
+        truncated:
+          type: boolean
+          description: 是否因限制截断
+
+    # ==================== Export ====================
+    CreateExportRequest:
+      type: object
+      required: [reportId, format]
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        format:
+          type: string
+          enum: [pdf, excel, csv]
+        parameters:
+          type: object
+          description: 报表参数
+        options:
+          $ref: '#/components/schemas/ExportOptions'
+
+    StreamExportRequest:
+      type: object
+      required: [reportId, format]
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        format:
+          type: string
+          enum: [pdf, excel, csv]
+        parameters:
+          type: object
+        options:
+          $ref: '#/components/schemas/ExportOptions'
+
+    ExportOptions:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: 自定义文件名（不含扩展名）
+        paperSize:
+          type: string
+          enum: [A4, A3, Letter, Legal]
+          default: A4
+        orientation:
+          type: string
+          enum: [portrait, landscape]
+          default: portrait
+        sheetName:
+          type: string
+          description: Excel 工作表名称
+        encoding:
+          type: string
+          enum: [utf8, utf8bom, gbk]
+          default: utf8
+        includeHeader:
+          type: boolean
+          default: true
+        dateFormat:
+          type: string
+          default: yyyy-MM-dd HH:mm:ss
+
+    ExportTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        format:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress:
+          type: integer
+          description: 进度百分比
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        estimatedCompletionAt:
+          type: string
+          format: date-time
+
+    ExportTaskDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        format:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress:
+          type: integer
+        currentRow:
+          type: integer
+          format: int64
+        totalRows:
+          type: integer
+          format: int64
+        fileSize:
+          type: integer
+          format: int64
+        fileUrl:
+          type: string
+          description: 临时下载链接
+        message:
+          type: string
+        errorDetails:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    ExecuteQueryRequest:
+      type: object
+      required: [reportId]
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        parameters:
+          type: object
+        page:
+          type: integer
+          default: 1
+        pageSize:
+          type: integer
+          default: 100
+          maximum: 10000
+        streaming:
+          type: boolean
+          default: false
+          description: 是否使用 SSE 流式返回
+
+    # ==================== Scheduler ====================
+    ScheduleSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        reportId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        cronExpression:
+          type: string
+        lastRunAt:
+          type: string
+          format: date-time
+        nextRunAt:
+          type: string
+          format: date-time
+
+    ScheduleDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        reportId:
+          type: string
+          format: uuid
+        reportName:
+          type: string
+        enabled:
+          type: boolean
+        cronExpression:
+          type: string
+          description: Cron 表达式
+        timezone:
+          type: string
+          default: Asia/Shanghai
+        exportFormat:
+          type: string
+          enum: [pdf, excel, csv]
+        exportOptions:
+          $ref: '#/components/schemas/ExportOptions'
+        parameters:
+          type: object
+          description: 报表参数默认值
+        recipients:
+          type: array
+          items:
+            type: string
+          description: 邮件接收列表
+        webhookUrl:
+          type: string
+          description: 完成通知 Webhook
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateScheduleRequest:
+      type: object
+      required: [name, reportId, cronExpression]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        reportId:
+          type: string
+          format: uuid
+        cronExpression:
+          type: string
+        timezone:
+          type: string
+        exportFormat:
+          type: string
+          enum: [pdf, excel, csv]
+          default: excel
+        exportOptions:
+          $ref: '#/components/schemas/ExportOptions'
+        parameters:
+          type: object
+        recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        webhookUrl:
+          type: string
+          format: uri
+
+    UpdateScheduleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        cronExpression:
+          type: string
+        timezone:
+          type: string
+        enabled:
+          type: boolean
+        exportFormat:
+          type: string
+        exportOptions:
+          $ref: '#/components/schemas/ExportOptions'
+        parameters:
+          type: object
+        recipients:
+          type: array
+          items:
+            type: string
+            format: email
+        webhookUrl:
+          type: string
+          format: uri
+
+    ExecutionHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, failed, timeout, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        durationMs:
+          type: integer
+        fileUrl:
+          type: string
+        errorMessage:
+          type: string
