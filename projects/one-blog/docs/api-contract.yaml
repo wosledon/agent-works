@@ -1,0 +1,1193 @@
+openapi: 3.0.3
+info:
+  title: one-blog API
+  description: |
+    one-blog 博客系统 API 文档
+    
+    ## 认证方式
+    本 API 使用 JWT Bearer Token 进行认证。在请求头中添加：
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## 响应格式
+    所有 API 响应遵循统一格式：
+    ```json
+    {
+      "success": true,
+      "data": { ... },
+      "message": null,
+      "errorCode": null
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api@one-blog.com
+
+servers:
+  - url: https://api.one-blog.com/v1
+    description: 生产环境
+  - url: http://localhost:5000/v1
+    description: 本地开发环境
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ==================== 认证模块 ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: 用户注册
+      description: 注册新用户账号
+      security: []  # 公开接口
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: 用户名或邮箱已存在
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 用户登录
+      description: 使用用户名/邮箱和密码登录
+      security: []  # 公开接口
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: 认证失败
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 刷新令牌
+      description: 使用 Refresh Token 获取新的 Access Token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  description: Refresh Token
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/TokenPair'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 退出登录
+      description: 使当前 Token 失效
+      responses:
+        '200':
+          description: 退出成功
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: 获取当前用户信息
+      description: 获取当前登录用户的详细信息
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetail'
+
+  # ==================== 文章模块 ====================
+  /posts:
+    get:
+      tags:
+        - Posts
+      summary: 获取文章列表
+      description: 获取公开文章列表，支持分页、筛选和排序
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: 页码
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 50
+          description: 每页数量
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: 分类 Slug
+        - name: tag
+          in: query
+          schema:
+            type: string
+          description: 标签 Slug
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: 搜索关键词
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, popular]
+            default: newest
+          description: 排序方式
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PaginatedPosts'
+
+    post:
+      tags:
+        - Posts
+      summary: 创建文章
+      description: 创建新文章（需要作者权限）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PostDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: 无权限
+
+  /posts/{slug}:
+    get:
+      tags:
+        - Posts
+      summary: 获取文章详情
+      description: 通过 Slug 获取文章详细信息
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 文章 Slug
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PostDetail'
+        '404':
+          description: 文章不存在
+
+    put:
+      tags:
+        - Posts
+      summary: 更新文章
+      description: 更新文章（需要作者或管理员权限）
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+      responses:
+        '200':
+          description: 更新成功
+        '403':
+          description: 无权限
+        '404':
+          description: 文章不存在
+
+    delete:
+      tags:
+        - Posts
+      summary: 删除文章
+      description: 删除文章（需要作者或管理员权限）
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 删除成功
+        '403':
+          description: 无权限
+
+  /posts/{slug}/publish:
+    post:
+      tags:
+        - Posts
+      summary: 发布文章
+      description: 将草稿状态文章发布
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 发布成功
+
+  /posts/{slug}/comments:
+    get:
+      tags:
+        - Posts
+        - Comments
+      summary: 获取文章评论
+      description: 获取指定文章的所有评论
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Comment'
+                          total:
+                            type: integer
+
+    post:
+      tags:
+        - Posts
+        - Comments
+      summary: 发表评论
+      description: 为文章添加评论
+      security: []  # 允许匿名评论
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: 评论成功
+
+  # ==================== 分类模块 ====================
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: 获取分类列表
+      description: 获取所有文章分类
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+
+    post:
+      tags:
+        - Categories
+      summary: 创建分类
+      description: 创建新分类（需要管理员权限）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: 创建成功
+
+  /categories/{slug}:
+    get:
+      tags:
+        - Categories
+      summary: 获取分类详情
+      description: 获取分类信息和该分类下的文章
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+    put:
+      tags:
+        - Categories
+      summary: 更新分类
+      description: 更新分类信息
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      tags:
+        - Categories
+      summary: 删除分类
+      description: 删除分类（该分类下不能有文章）
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 删除成功
+
+  # ==================== 标签模块 ====================
+  /tags:
+    get:
+      tags:
+        - Tags
+      summary: 获取标签列表
+      description: 获取所有标签，支持按热度排序
+      security: []
+      parameters:
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, popularity]
+            default: name
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Tag'
+
+  /tags/{slug}:
+    get:
+      tags:
+        - Tags
+      summary: 获取标签详情
+      description: 获取标签信息和该标签下的文章
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 评论模块 ====================
+  /comments/{id}:
+    get:
+      tags:
+        - Comments
+      summary: 获取评论详情
+      description: 获取单条评论信息
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+
+    delete:
+      tags:
+        - Comments
+      summary: 删除评论
+      description: 删除评论（需要管理员或评论作者权限）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: 删除成功
+
+  /comments/{id}/approve:
+    post:
+      tags:
+        - Comments
+      summary: 审核通过评论
+      description: 将待审核评论标记为已通过
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 审核成功
+
+  /comments/{id}/reply:
+    post:
+      tags:
+        - Comments
+      summary: 回复评论
+      description: 回复某条评论
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: 回复成功
+
+  # ==================== 用户模块 ====================
+  /users:
+    get:
+      tags:
+        - Users
+      summary: 获取用户列表
+      description: 获取用户列表（仅管理员）
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: 获取用户信息
+      description: 获取用户公开信息
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserPublic'
+
+    put:
+      tags:
+        - Users
+      summary: 更新用户信息
+      description: 更新用户资料
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+  /users/{id}/posts:
+    get:
+      tags:
+        - Users
+      summary: 获取用户文章
+      description: 获取指定用户的所有公开文章
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: 成功
+
+  # ==================== 系统模块 ====================
+  /health:
+    get:
+      tags:
+        - System
+      summary: 健康检查
+      description: 检查 API 服务健康状态
+      security: []
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  checks:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /stats:
+    get:
+      tags:
+        - System
+      summary: 获取统计数据
+      description: 获取博客统计数据（文章数、评论数等）
+      security: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/BlogStats'
+
+# ==================== 组件定义 ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer Token
+
+  schemas:
+    # 基础响应
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        errorCode:
+          type: string
+          nullable: true
+        errors:
+          type: object
+          nullable: true
+
+    # 认证相关
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+          description: 用户名，只能包含字母、数字和下划线
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+          description: 密码，至少8位
+        displayName:
+          type: string
+          maxLength: 100
+
+    LoginRequest:
+      type: object
+      required:
+        - login
+        - password
+      properties:
+        login:
+          type: string
+          description: 用户名或邮箱
+        password:
+          type: string
+          description: 密码
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserDetail'
+        tokens:
+          $ref: '#/components/schemas/TokenPair'
+
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token，有效期15分钟
+        refreshToken:
+          type: string
+          description: Refresh Token，有效期7天
+        expiresIn:
+          type: integer
+          description: Access Token 过期时间（秒）
+
+    # 用户相关
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [Admin, Author, Reader]
+        createdAt:
+          type: string
+          format: date-time
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        postCount:
+          type: integer
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        bio:
+          type: string
+          maxLength: 500
+        avatar:
+          type: string
+          format: uri
+
+    # 文章相关
+    PostListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        coverImage:
+          type: string
+          nullable: true
+        author:
+          $ref: '#/components/schemas/UserPublic'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        commentCount:
+          type: integer
+        viewCount:
+          type: integer
+        publishedAt:
+          type: string
+          format: date-time
+
+    PostDetail:
+      allOf:
+        - $ref: '#/components/schemas/PostListItem'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: Markdown 格式的文章内容
+            status:
+              type: string
+              enum: [Draft, Published, Archived]
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+              nullable: true
+
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          minLength: 10
+        summary:
+          type: string
+          maxLength: 500
+        coverImage:
+          type: string
+          format: uri
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tagNames:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+        status:
+          type: string
+          enum: [Draft, Published]
+          default: Draft
+
+    UpdatePostRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          minLength: 10
+        summary:
+          type: string
+          maxLength: 500
+        coverImage:
+          type: string
+          format: uri
+        categoryIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tagNames:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+        status:
+          type: string
+          enum: [Draft, Published, Archived]
+
+    PaginatedPosts:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostListItem'
+        total:
+          type: integer
+          description: 总记录数
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    # 分类相关
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        postCount:
+          type: integer
+
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: '^[a-z0-9-]+$'
+          description: URL 友好的标识
+        description:
+          type: string
+          maxLength: 500
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    # 标签相关
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        postCount:
+          type: integer
+
+    # 评论相关
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        authorName:
+          type: string
+          nullable: true
+        authorEmail:
+          type: string
+          nullable: true
+        user:
+          $ref: '#/components/schemas/UserPublic'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        replies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    CreateCommentRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        authorName:
+          type: string
+          maxLength: 100
+        authorEmail:
+          type: string
+          format: email
+        parentId:
+          type: string
+          format: uuid
+          description: 回复的评论 ID
+
+    # 统计相关
+    BlogStats:
+      type: object
+      properties:
+        postCount:
+          type: integer
+        commentCount:
+          type: integer
+        categoryCount:
+          type: integer
+        tagCount:
+          type: integer
+        userCount:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - example:
+                  success: false
+                  data: null
+                  message: "Validation failed"
+                  errorCode: "VALIDATION_ERROR"
+                  errors:
+                    title:
+                      - "Title is required"
+                    content:
+                      - "Content must be at least 10 characters"
+
+    Unauthorized:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - example:
+                  success: false
+                  data: null
+                  message: "Unauthorized"
+                  errorCode: "UNAUTHORIZED"
+
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - example:
+                  success: false
+                  data: null
+                  message: "Forbidden"
+                  errorCode: "FORBIDDEN"
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - example:
+                  success: false
+                  data: null
+                  message: "Resource not found"
+                  errorCode: "NOT_FOUND"
