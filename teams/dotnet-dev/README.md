@@ -32,16 +32,18 @@ Frontend ↔ Backend 并行开发 → QA 测试 → 验收上线
 3. 创建项目目录：`projects/{project-name}/`
 4. **明确告知各角色：工作目录是 `projects/{project-name}/`** ← 防止写错位置
 5. **告知 Git 提交规范**：小步快跑，1-2 小时必须提交一次
-6. 召集全员开会（spawn 各角色子代理，显式指定输出路径）
-7. 各角色输出初始文档到 `docs/`
-8. PM 整合撰写项目 `README.md`
-9. PM 汇总里程碑到 `roadmap.md`
+6. **告知云端组件规范**：所有外部依赖必须提供本地/内存降级方案
+7. 召集全员开会（spawn 各角色子代理，显式指定输出路径）
+8. 各角色输出初始文档到 `docs/`
+9. PM 整合撰写项目 `README.md`
+10. PM 汇总里程碑到 `roadmap.md`
 ```
 
 ⚠️ **重要规矩**:
 - 项目名称必须由用户确认
 - 每次 spawn 必须显式指定 `输出到：projects/{name}/`
 - **Git 提交**：小步快跑，禁止攒代码，详见 [git-guidelines.md](./git-guidelines.md)
+- **云端组件**：必须支持本地/内存降级，详见 [cloud-component-guidelines.md](./cloud-component-guidelines.md)
 
 ## 截图流程（开发完成后）
 
