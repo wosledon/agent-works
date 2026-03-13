@@ -1,16 +1,28 @@
 /**
- * 文章详情页
+ * 文章详情页 - 集成评论系统
  */
 import { useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useBlogStore, useAuthStore } from '../store';
+import { CommentList } from '../components/CommentList';
 import { MarkdownPreview } from '../components/MarkdownEditor';
 import { ArrowLeft, Clock, Eye, Heart, Tag, Share2, MessageCircle, Edit, Trash2 } from 'lucide-react';
 
 export function PostDetailPage() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
-  const { posts, currentPost, setCurrentPost, comments, likePost, deletePost } = useBlogStore();
+  const { 
+    posts, 
+    currentPost, 
+    setCurrentPost, 
+    getPostComments,
+    addComment,
+    updateComment,
+    deleteComment,
+    likeComment,
+    likePost, 
+    deletePost 
+  } = useBlogStore();
   const { user, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
@@ -19,7 +31,6 @@ export function PostDetailPage() {
       if (post) {
         setCurrentPost(post);
       } else {
-        // 文章不存在，返回首页
         navigate('/');
       }
     }
@@ -36,7 +47,6 @@ export function PostDetailPage() {
     );
   }
 
-  // 格式化日期
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('zh-CN', {
@@ -46,30 +56,54 @@ export function PostDetailPage() {
     });
   };
 
-  // 计算阅读时间
   const readingTime = Math.ceil(currentPost.content.length / 500);
-
-  // 是否可编辑
   const canEdit = isAuthenticated && (user?.id === currentPost.author.id || user?.role === 'admin');
+  const postComments = getPostComments(currentPost.id);
 
-  // 文章评论
-  const postComments = comments.filter((c) => c.postId === currentPost.id);
+  // 评论操作
+  const handleAddComment = (content: string, parentId?: string) => {
+    if (!user) return;
+    addComment(currentPost.id, content, {
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+    }, parentId);
+  };
+
+  const handleEditComment = (commentId: string, content: string) => {
+    updateComment(commentId, content);
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    deleteComment(commentId);
+  };
+
+  const handleLikeComment = (commentId: string) => {
+    likeComment(commentId);
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
       {/* 返回按钮 */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-gray-500 hover:text-gray-900 mb-6 transition-colors"
+        className="
+          flex items-center text-gray-500 dark:text-gray-400 
+          hover:text-gray-900 dark:hover:text-gray-100 mb-4 md:mb-6 
+          transition-colors
+        "
       >
         <ArrowLeft className="w-5 h-5 mr-1" />
         返回
       </button>
 
-      <article className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <article className="
+        bg-white dark:bg-gray-900 rounded-xl shadow-sm 
+        overflow-hidden transition-colors
+      ">
         {/* 封面图 */}
         {currentPost.coverImage && (
-          <div className="h-64 md:h-80">
+          <div className="h-48 sm:h-64 md:h-80">
             <img
               src={currentPost.coverImage}
               alt={currentPost.title}
@@ -78,69 +112,104 @@ export function PostDetailPage() {
           </div>
         )}
 
-        <div className="p-6 md:p-10">
+        <div className="p-4 sm:p-6 md:p-10">
           {/* 标签 */}
           <div className="flex flex-wrap gap-2 mb-4">
             {currentPost.tags.map((tag) => (
-              <Link
+              <button
                 key={tag.id}
-                to={`/tag/${tag.slug}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                onClick={() => navigate(`/tag/${tag.slug}`)}
+                className="
+                  inline-flex items-center px-3 py-1 rounded-full 
+                  text-sm font-medium 
+                  bg-blue-50 dark:bg-blue-900/30 
+                  text-blue-700 dark:text-blue-300 
+                  hover:bg-blue-100 dark:hover:bg-blue-900/50 
+                  transition-colors
+                "
               >
                 <Tag className="w-3 h-3 mr-1" />
                 {tag.name}
-              </Link>
+              </button>
             ))}
           </div>
 
           {/* 标题 */}
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+          <h1 className="
+            text-2xl sm:text-3xl md:text-4xl font-bold 
+            text-gray-900 dark:text-gray-100 mb-4 md:mb-6
+          ">
             {currentPost.title}
           </h1>
 
           {/* 作者信息 */}
-          <div className="flex items-center justify-between py-6 border-y border-gray-100 mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="
+            flex flex-col sm:flex-row sm:items-center 
+            justify-between py-4 sm:py-6 
+            border-y border-gray-100 dark:border-gray-800 mb-6 md:mb-8
+          ">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <img
                 src={currentPost.author.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest'}
                 alt={currentPost.author.name}
-                className="w-12 h-12 rounded-full"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
               />
               <div>
-                <p className="font-medium text-gray-900">{currentPost.author.name}</p>
-                <div className="flex items-center text-sm text-gray-500 space-x-4">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  {currentPost.author.name}
+                </p>
+                <div className="flex flex-wrap items-center text-sm text-gray-500 dark:text-gray-400 gap-2 sm:gap-4">
                   <span className="flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
                     {formatDate(currentPost.publishedAt)}
                   </span>
-                  <span className="flex items-center">
-                    {readingTime} 分钟阅读
-                  </span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>{readingTime} 分钟阅读</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 mt-4 sm:mt-0">
               <button
                 onClick={() => likePost(currentPost.id)}
-                className="flex items-center space-x-1 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="
+                  flex items-center space-x-1 px-3 sm:px-4 py-2 
+                  text-gray-600 dark:text-gray-400 
+                  hover:text-red-600 dark:hover:text-red-400 
+                  hover:bg-red-50 dark:hover:bg-red-900/20 
+                  rounded-lg transition-colors
+                "
               >
                 <Heart className="w-5 h-5" />
-                <span>{currentPost.likeCount}</span>
+                <span className="hidden sm:inline">{currentPost.likeCount}</span>
               </button>
 
-              <button className="flex items-center space-x-1 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+              <button 
+                className="
+                  flex items-center space-x-1 px-3 sm:px-4 py-2 
+                  text-gray-600 dark:text-gray-400 
+                  hover:text-blue-600 dark:hover:text-blue-400 
+                  hover:bg-blue-50 dark:hover:bg-blue-900/20 
+                  rounded-lg transition-colors
+                "
+              >
                 <Share2 className="w-5 h-5" />
               </button>
 
               {canEdit && (
                 <>
-                  <Link
-                    to={`/editor/${currentPost.slug}`}
-                    className="flex items-center space-x-1 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  <button
+                    onClick={() => navigate(`/editor/${currentPost.slug}`)}
+                    className="
+                      flex items-center space-x-1 px-3 sm:px-4 py-2 
+                      text-gray-600 dark:text-gray-400 
+                      hover:text-blue-600 dark:hover:text-blue-400 
+                      hover:bg-blue-50 dark:hover:bg-blue-900/20 
+                      rounded-lg transition-colors
+                    "
                   >
                     <Edit className="w-5 h-5" />
-                  </Link>
+                  </button>
                   <button
                     onClick={() => {
                       if (confirm('确定要删除这篇文章吗？')) {
@@ -148,7 +217,13 @@ export function PostDetailPage() {
                         navigate('/');
                       }
                     }}
-                    className="flex items-center space-x-1 px-4 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="
+                      flex items-center space-x-1 px-3 sm:px-4 py-2 
+                      text-gray-600 dark:text-gray-400 
+                      hover:text-red-600 dark:hover:text-red-400 
+                      hover:bg-red-50 dark:hover:bg-red-900/20 
+                      rounded-lg transition-colors
+                    "
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -158,13 +233,17 @@ export function PostDetailPage() {
           </div>
 
           {/* 文章内容 */}
-          <div className="prose prose-slate prose-lg max-w-none">
+          <div className="prose prose-slate prose-lg dark:prose-invert max-w-none">
             <MarkdownPreview content={currentPost.content} />
           </div>
 
           {/* 底部统计 */}
-          <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-100">
-            <div className="flex items-center space-x-6 text-sm text-gray-500">
+          <div className="
+            flex flex-col sm:flex-row sm:items-center justify-between 
+            mt-8 md:mt-10 pt-6 
+            border-t border-gray-100 dark:border-gray-800
+          ">
+            <div className="flex items-center space-x-4 sm:space-x-6 text-sm text-gray-500 dark:text-gray-400">
               <span className="flex items-center">
                 <Eye className="w-4 h-4 mr-1" />
                 {currentPost.viewCount} 阅读
@@ -179,7 +258,7 @@ export function PostDetailPage() {
               </span>
             </div>
 
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2 sm:mt-0">
               更新于 {formatDate(currentPost.updatedAt)}
             </p>
           </div>
@@ -187,34 +266,16 @@ export function PostDetailPage() {
       </article>
 
       {/* 评论区 */}
-      <section className="mt-8 bg-white rounded-xl shadow-sm p-6 md:p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
-          评论 ({postComments.length})
-        </h2>
-
-        {postComments.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">暂无评论，来发表第一条评论吧！</p>
-        ) : (
-          <div className="space-y-6">
-            {postComments.map((comment) => (
-              <div key={comment.id} className="flex space-x-4">
-                <img
-                  src={comment.author.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest'}
-                  alt={comment.author.name}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-medium text-gray-900">{comment.author.name}</span>
-                    <span className="text-sm text-gray-400">{formatDate(comment.createdAt)}</span>
-                  </div>
-                  <p className="text-gray-700">{comment.content}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="mt-6 md:mt-8">
+        <CommentList
+          comments={postComments}
+          currentUser={user ? { id: user.id, name: user.name, avatar: user.avatar } : null}
+          onAddComment={handleAddComment}
+          onEditComment={handleEditComment}
+          onDeleteComment={handleDeleteComment}
+          onLikeComment={handleLikeComment}
+        />
+      </div>
     </div>
   );
 }

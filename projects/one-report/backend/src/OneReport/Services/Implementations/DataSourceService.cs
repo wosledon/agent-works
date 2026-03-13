@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 using Npgsql;
 using OneReport.Data;
 using OneReport.Data.Entities;
@@ -9,16 +9,21 @@ using OneReport.Services.Interfaces;
 namespace OneReport.Services.Implementations;
 
 /// <summary>
-/// 数据源服务实现
+/// 数据源服务实现 - 支持 PostgreSQL、MySQL、API 数据源
 /// </summary>
 public class DataSourceService : IDataSourceService
 {
     private readonly AppDbContext _context;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<DataSourceService> _logger;
 
-    public DataSourceService(AppDbContext context, ILogger<DataSourceService> logger)
+    public DataSourceService(
+        AppDbContext context, 
+        IHttpClientFactory httpClientFactory,
+        ILogger<DataSourceService> logger)
     {
         _context = context;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -59,7 +64,7 @@ public class DataSourceService : IDataSourceService
         {
             Id = Guid.NewGuid(),
             Name = dto.Name,
-            Type = dto.Type,
+            Type = dto.Type.ToLower(),
             ConnectionString = dto.ConnectionString,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -68,7 +73,7 @@ public class DataSourceService : IDataSourceService
         _context.DataSources.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("数据源创建成功: {DataSourceId} - {Name}", entity.Id, entity.Name);
+        _logger.LogInformation("数据源创建成功: {DataSourceId} - {Name}, 类型: {Type}", entity.Id, entity.Name, entity.Type);
 
         return MapToDto(entity);
     }
@@ -94,7 +99,7 @@ public class DataSourceService : IDataSourceService
         }
 
         entity.Name = dto.Name;
-        entity.Type = dto.Type;
+        entity.Type = dto.Type.ToLower();
         entity.ConnectionString = dto.ConnectionString;
         entity.IsActive = dto.IsActive;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -124,6 +129,8 @@ public class DataSourceService : IDataSourceService
             return request.Type.ToLower() switch
             {
                 "postgresql" or "postgres" => await TestPostgreSqlConnectionAsync(request.ConnectionString, cancellationToken),
+                "mysql" => await TestMySqlConnectionAsync(request.ConnectionString, cancellationToken),
+                "api" or "http" => await TestApiConnectionAsync(request.ConnectionString, cancellationToken),
                 _ => throw new NotSupportedException($"数据源类型 {request.Type} 暂不支持")
             };
         }
@@ -151,6 +158,41 @@ public class DataSourceService : IDataSourceService
         }
     }
 
+    private async Task<bool> TestMySqlConnectionAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = new MySqlConnection(connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = new MySqlCommand("SELECT 1", connection);
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MySQL连接测试失败");
+            return false;
+        }
+    }
+
+    private async Task<bool> TestApiConnectionAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // connectionString 对于 API 类型实际上是 API URL
+            using var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            
+            var response = await client.GetAsync(connectionString, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "API连接测试失败");
+            return false;
+        }
+    }
+
     private static DataSourceDto MapToDto(DataSource entity)
     {
         return new DataSourceDto
@@ -159,25 +201,41 @@ public class DataSourceService : IDataSourceService
             Name = entity.Name,
             Type = entity.Type,
             // 隐藏敏感信息
-            ConnectionString = MaskConnectionString(entity.ConnectionString),
+            ConnectionString = MaskConnectionString(entity.Type, entity.ConnectionString),
             IsActive = entity.IsActive,
             CreatedAt = entity.CreatedAt
         };
     }
 
-    private static string MaskConnectionString(string connectionString)
+    private static string MaskConnectionString(string type, string connectionString)
     {
-        // 简单掩码处理，生产环境应使用更安全的处理
         if (string.IsNullOrEmpty(connectionString)) return connectionString;
         
-        // 掩码密码
+        if (type is "api" or "http")
+        {
+            // 对于 API URL，只返回部分路径
+            try
+            {
+                var uri = new Uri(connectionString);
+                return $"{uri.Scheme}://{uri.Host}/***";
+            }
+            catch
+            {
+                return "***";
+            }
+        }
+
+        // 掩码数据库连接字符串的密码
         var parts = connectionString.Split(';');
         var maskedParts = parts.Select(part =>
         {
-            if (part.Trim().StartsWith("Password=", StringComparison.OrdinalIgnoreCase) ||
-                part.Trim().StartsWith("Pwd=", StringComparison.OrdinalIgnoreCase))
+            var trimmedPart = part.Trim();
+            if (trimmedPart.StartsWith("Password=", StringComparison.OrdinalIgnoreCase) ||
+                trimmedPart.StartsWith("Pwd=", StringComparison.OrdinalIgnoreCase) ||
+                trimmedPart.StartsWith("password=", StringComparison.OrdinalIgnoreCase))
             {
-                return part.Split('=')[0] + "=***";
+                var key = trimmedPart.Split('=')[0];
+                return $"{key}=***";
             }
             return part;
         });
