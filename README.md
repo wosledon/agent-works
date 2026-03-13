@@ -13,6 +13,7 @@
 | 项目 | 说明 | 路径 |
 |------|------|------|
 | **.NET 开发团队** | 多代理并行开发团队配置 | [`teams/dotnet-dev/`](./teams/dotnet-dev/) |
+| **dotnet-blog** | 博客系统（进行中） | [`projects/dotnet-blog/`](./projects/dotnet-blog/) |
 
 ---
 *最后更新：2026-03-14*
