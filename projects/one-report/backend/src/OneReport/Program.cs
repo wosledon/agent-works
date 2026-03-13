@@ -3,6 +3,7 @@ using Npgsql;
 using OneReport.Data;
 using OneReport.Services.Implementations;
 using OneReport.Services.Interfaces;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,37 +16,97 @@ builder.Services.AddSwaggerGen(c =>
     c.EnableAnnotations();
 });
 
-// 数据库配置 - PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// ========================================
+// 数据库配置：PostgreSQL 或 SQLite 自动切换
+// ========================================
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// 配置 Npgsql 数据源以支持 JSONB
-var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-dataSourceBuilder.EnableDynamicJson();
-var dataSource = dataSourceBuilder.Build();
-
-builder.Services.AddDbContext<AppDbContext>(options =>
+if (!string.IsNullOrWhiteSpace(connectionString) 
+    && !connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
 {
-    options.UseNpgsql(dataSource, npgsqlOptions =>
-    {
-        npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public");
-        // 启用批量操作优化
-        npgsqlOptions.MaxBatchSize(100);
-        npgsqlOptions.CommandTimeout(60);
-    });
-    
-    // 使用 snake_case 命名约定
-    options.UseSnakeCaseNamingConvention();
-    
-    // 开发环境启用敏感日志
-    if (builder.Environment.IsDevelopment())
-    {
-        options.EnableSensitiveDataLogging();
-        options.EnableDetailedErrors();
-    }
-});
+    // 使用 PostgreSQL
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+    dataSourceBuilder.EnableDynamicJson();
+    var dataSource = dataSourceBuilder.Build();
 
-// 注册服务
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    {
+        options.UseNpgsql(dataSource, npgsqlOptions =>
+        {
+            npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public");
+            npgsqlOptions.MaxBatchSize(100);
+            npgsqlOptions.CommandTimeout(60);
+        });
+        options.UseSnakeCaseNamingConvention();
+        
+        if (builder.Environment.IsDevelopment())
+        {
+            options.EnableSensitiveDataLogging();
+            options.EnableDetailedErrors();
+        }
+    });
+
+    Console.WriteLine("[Database] Using PostgreSQL");
+}
+else
+{
+    // 使用 SQLite 作为降级方案
+    var sqlitePath = connectionString?.Contains("Data Source=") == true
+        ? connectionString.Replace("Data Source=", "").Trim()
+        : builder.Configuration.GetValue("Database:SqlitePath", "data/one-report.db");
+    
+    var fullPath = Path.IsPathRooted(sqlitePath) 
+        ? sqlitePath 
+        : Path.Combine(builder.Environment.ContentRootPath, sqlitePath);
+    
+    Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+    
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    {
+        options.UseSqlite($"Data Source={fullPath}");
+        options.UseSnakeCaseNamingConvention();
+        
+        if (builder.Environment.IsDevelopment())
+        {
+            options.EnableSensitiveDataLogging();
+            options.EnableDetailedErrors();
+        }
+    });
+
+    Console.WriteLine($"[Database] Using SQLite: {fullPath}");
+}
+
+// ========================================
+// 缓存配置：Redis 或 MemoryCache 自动切换
+// ========================================
+var redisConnection = builder.Configuration.GetConnectionString("Redis");
+
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    // 使用 Redis
+    try
+    {
+        var redis = ConnectionMultiplexer.Connect(redisConnection);
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+        Console.WriteLine("[Cache] Using Redis");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Cache] Redis connection failed: {ex.Message}, falling back to MemoryCache");
+        builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+    }
+}
+else
+{
+    // 使用 MemoryCache 作为降级方案
+    builder.Services.AddMemoryCache();
+    builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+    Console.WriteLine("[Cache] Using MemoryCache (fallback mode)");
+}
+
+// 注册业务服务
 builder.Services.AddScoped<IReportDefinitionService, ReportDefinitionService>();
 builder.Services.AddScoped<IReportDataService, ReportDataService>();
 builder.Services.AddScoped<IReportExportService, ReportExportService>();
@@ -77,11 +138,11 @@ using (var scope = app.Services.CreateScope())
     try
     {
         db.Database.Migrate();
-        Console.WriteLine("数据库迁移完成");
+        Console.WriteLine("[Database] Migration completed");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"数据库迁移失败: {ex.Message}");
+        Console.WriteLine($"[Database] Migration failed: {ex.Message}");
     }
 }
 
