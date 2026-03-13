@@ -1,4 +1,5 @@
 using DotnetBlog.Data;
+using DotnetBlog.Endpoints;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,5 +30,8 @@ app.UseHttpsRedirection();
 app.MapGet("/", () => "DotnetBlog API is running!");
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+app.MapPostEndpoints();
+app.MapCategoryEndpoints();
 
 app.Run();
