@@ -23,8 +23,14 @@ public class BlogDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => new { e.Status, e.PublishedAt });
             entity.Property(e => e.Title).HasMaxLength(200);
             entity.Property(e => e.Slug).HasMaxLength(200);
+            
+            // Configure full-text search for PostgreSQL
+            entity.HasIndex(e => e.SearchVector)
+                .HasMethod("GIN");
+            
             entity.HasOne(e => e.Author)
                 .WithMany(u => u.Posts)
                 .HasForeignKey(e => e.AuthorId)
@@ -56,6 +62,11 @@ public class BlogDbContext : DbContext
         modelBuilder.Entity<Comment>(entity =>
         {
             entity.HasKey(e => e.Id);
+            
+            // Performance indexes
+            entity.HasIndex(e => new { e.Status, e.PostId });
+            entity.HasIndex(e => new { e.PostId, e.ParentId });
+            
             entity.HasOne(e => e.Post)
                 .WithMany(p => p.Comments)
                 .HasForeignKey(e => e.PostId)

@@ -3,3 +3,4 @@
  */
 export { useAuthStore, type User } from './authStore';
 export { useBlogStore } from './blogStore';
+export { useThemeStore } from './themeStore';

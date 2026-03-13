@@ -13,6 +13,26 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddEndpointsApiExplorer();
 
+// Add Response Compression for better performance
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
+// Add Response Caching
+builder.Services.AddResponseCaching();
+
 // Configure Swagger with JWT support
 builder.Services.AddSwaggerGen(options =>
 {
@@ -66,10 +86,12 @@ builder.Services.AddDbContext<BlogDbContext>(options =>
     }
     else
     {
-        // Use PostgreSQL for production connections
+        // Use PostgreSQL for production connections with performance optimizations
         options.UseNpgsql(connectionString, npgsqlOptions =>
         {
             npgsqlOptions.MigrationsAssembly("DotnetBlog");
+            // Enable split query optimization for EF Core 8
+            npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
         });
         builder.Configuration["DatabaseProvider"] = "PostgreSQL";
     }
@@ -141,7 +163,8 @@ else
 
 // Register custom services
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, IAuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IArticleService, CachedArticleService>(); // M3: Cached article service
 
 var app = builder.Build();
 
@@ -151,6 +174,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Use response compression
+app.UseResponseCompression();
+
+// Use CORS
+app.UseCors("AllowFrontend");
+
+// Use response caching
+app.UseResponseCaching();
 
 app.UseHttpsRedirection();
 
@@ -172,6 +204,8 @@ app.MapGet("/health", () => Results.Ok(new
 app.MapAuthEndpoints();
 app.MapPostEndpoints();  // Keep existing endpoints for backward compatibility
 app.MapCategoryEndpoints();
-app.MapArticleEndpoints();  // New comprehensive article endpoints
+app.MapArticleEndpoints();  // Article endpoints with caching
+app.MapCommentEndpoints();  // Comment system (M3)
+app.MapSearchEndpoints();   // Search functionality (M3)
 
 app.Run();

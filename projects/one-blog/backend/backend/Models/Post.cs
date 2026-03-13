@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NpgsqlTypes;
 
 namespace DotnetBlog.Models;
 
@@ -29,6 +30,9 @@ public class Post
     public DateTime? UpdatedAt { get; set; }
 
     public int ViewCount { get; set; }
+
+    // PostgreSQL Full-Text Search Vector
+    public NpgsqlTsVector? SearchVector { get; set; }
 
     public int AuthorId { get; set; }
     public User Author { get; set; } = null!;

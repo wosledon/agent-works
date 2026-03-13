@@ -40,6 +40,13 @@ interface BlogState {
   deletePost: (id: string) => void;
   likePost: (id: string) => void;
   
+  // 评论操作
+  addComment: (postId: string, content: string, author: Author, parentId?: string) => Comment;
+  updateComment: (commentId: string, content: string) => void;
+  deleteComment: (commentId: string) => void;
+  likeComment: (commentId: string) => void;
+  getPostComments: (postId: string) => Comment[];
+  
   // 派生状态
   getPostById: (id: string) => Post | undefined;
   getPostBySlug: (slug: string) => Post | undefined;
@@ -239,7 +246,8 @@ CSS 布局技术已经发生了巨大变化。
   justify-content: center;
   align-items: center;
 }
-\`\`\``,    coverImage: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&auto=format&fit=crop',
+\`\`\``,    
+    coverImage: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?w=800&auto=format&fit=crop',
     author: MOCK_AUTHORS[1],
     tags: [MOCK_TAGS[3]],
     publishedAt: '2024-03-01T09:00:00Z',
@@ -268,7 +276,8 @@ CSS 布局技术已经发生了巨大变化。
 \`\`\`sql
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
-\`\`\``,    coverImage: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&auto=format&fit=crop',
+\`\`\``,    
+    coverImage: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&auto=format&fit=crop',
     author: MOCK_AUTHORS[0],
     tags: [MOCK_TAGS[5]],
     publishedAt: '2024-02-28T14:00:00Z',
@@ -308,7 +317,8 @@ services:
     build: .
     ports:
       - "3000:3000"
-\`\`\``,    coverImage: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&auto=format&fit=crop',
+\`\`\``,    
+    coverImage: 'https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&auto=format&fit=crop',
     author: MOCK_AUTHORS[2],
     tags: [MOCK_TAGS[6]],
     publishedAt: '2024-02-25T11:00:00Z',
@@ -333,6 +343,22 @@ const MOCK_COMMENTS: Comment[] = [
     author: MOCK_AUTHORS[2],
     postId: '1',
     createdAt: '2024-03-10T12:30:00Z',
+  },
+  {
+    id: '3',
+    content: '请问服务器组件对 SEO 有帮助吗？',
+    author: MOCK_AUTHORS[0],
+    postId: '1',
+    parentId: '1',
+    createdAt: '2024-03-10T14:00:00Z',
+  },
+  {
+    id: '4',
+    content: '很有帮助！因为首屏 HTML 已经包含了内容。',
+    author: MOCK_AUTHORS[1],
+    postId: '1',
+    parentId: '3',
+    createdAt: '2024-03-10T15:00:00Z',
   },
 ];
 
@@ -395,6 +421,8 @@ export const useBlogStore = create<BlogState>((set, get) => ({
       posts: state.posts.filter((post) => post.id !== id),
       totalPosts: state.totalPosts - 1,
       currentPost: state.currentPost?.id === id ? null : state.currentPost,
+      // 删除文章时同时删除相关评论
+      comments: state.comments.filter((c) => c.postId !== id),
     }));
   },
   
@@ -408,6 +436,56 @@ export const useBlogStore = create<BlogState>((set, get) => ({
           ? { ...state.currentPost, likeCount: state.currentPost.likeCount + 1 }
           : state.currentPost,
     }));
+  },
+  
+  // 评论操作
+  addComment: (postId, content, author, parentId) => {
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      content,
+      author,
+      postId,
+      parentId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      comments: [...state.comments, newComment],
+    }));
+    return newComment;
+  },
+  
+  updateComment: (commentId, content) => {
+    set((state) => ({
+      comments: state.comments.map((comment) =>
+        comment.id === commentId
+          ? { ...comment, content, updatedAt: new Date().toISOString() }
+          : comment
+      ),
+    }));
+  },
+  
+  deleteComment: (commentId) => {
+    set((state) => ({
+      // 删除评论及其所有回复
+      comments: state.comments.filter(
+        (c) => c.id !== commentId && c.parentId !== commentId
+      ),
+    }));
+  },
+  
+  likeComment: (commentId) => {
+    set((state) => ({
+      comments: state.comments.map((c) =>
+        c.id === commentId
+          ? { ...c, likeCount: (c as any).likeCount + 1 || 1 }
+          : c
+      ),
+    }));
+  },
+  
+  getPostComments: (postId) => {
+    return get().comments.filter((c) => c.postId === postId);
   },
   
   getPostById: (id) => get().posts.find((post) => post.id === id),
