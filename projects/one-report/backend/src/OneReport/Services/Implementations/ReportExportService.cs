@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO.Pipelines;
 using System.Text;
 using System.Text.Json;
 using ClosedXML.Excel;
@@ -21,6 +20,7 @@ public class ReportExportService : IReportExportService
 {
     private readonly AppDbContext _context;
     private readonly IReportDataService _dataService;
+    private readonly IExportJobQueueService _jobQueueService;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ReportExportService> _logger;
     
@@ -30,11 +30,13 @@ public class ReportExportService : IReportExportService
     public ReportExportService(
         AppDbContext context,
         IReportDataService dataService,
+        IExportJobQueueService jobQueueService,
         IWebHostEnvironment environment,
         ILogger<ReportExportService> logger)
     {
         _context = context;
         _dataService = dataService;
+        _jobQueueService = jobQueueService;
         _environment = environment;
         _logger = logger;
     }
@@ -44,7 +46,7 @@ public class ReportExportService : IReportExportService
     /// </summary>
     public async Task<Stream> ExportToCsvAsync(
         Guid reportDefinitionId, 
-        Dictionary<string, object>? parameters, 
+        Dictionary<string, object?>? parameters, 
         CancellationToken cancellationToken = default)
     {
         var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
@@ -97,7 +99,7 @@ public class ReportExportService : IReportExportService
     /// </summary>
     public async Task<Stream> ExportToExcelAsync(
         Guid reportDefinitionId, 
-        Dictionary<string, object>? parameters, 
+        Dictionary<string, object?>? parameters, 
         CancellationToken cancellationToken = default)
     {
         var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
@@ -168,7 +170,7 @@ public class ReportExportService : IReportExportService
     /// </summary>
     public async Task<Stream> ExportToJsonAsync(
         Guid reportDefinitionId, 
-        Dictionary<string, object>? parameters, 
+        Dictionary<string, object?>? parameters, 
         CancellationToken cancellationToken = default)
     {
         var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
@@ -214,40 +216,27 @@ public class ReportExportService : IReportExportService
         ExportReportRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var report = await GetReportDefinitionAsync(request.ReportDefinitionId, cancellationToken);
-        
-        var history = new ReportExportHistory
+        var report = await _context.ReportDefinitions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == request.ReportDefinitionId && r.IsActive, cancellationToken);
+
+        if (report == null)
+            throw new InvalidOperationException($"报表定义 {request.ReportDefinitionId} 不存在");
+
+        // 提交到任务队列
+        var jobId = await _jobQueueService.EnqueueAsync(new ExportJobRequest
         {
-            Id = Guid.NewGuid(),
             ReportDefinitionId = request.ReportDefinitionId,
-            ExportFormat = request.Format,
-            Status = "processing",
-            CreatedAt = DateTime.UtcNow,
-            Parameters = request.Parameters != null ? JsonSerializer.Serialize(request.Parameters) : null
-        };
-
-        _context.ReportExportHistories.Add(history);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // 后台执行导出
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await ExecuteExportAsync(history.Id, report, request);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "导出任务失败: {ExportId}", history.Id);
-                await UpdateExportStatusAsync(history.Id, "failed", errorMessage: ex.Message);
-            }
+            Format = request.Format,
+            Parameters = request.Parameters,
+            FileName = request.FileName ?? report.Name
         }, cancellationToken);
 
         return new ExportJobResponse
         {
-            ExportId = history.Id,
-            Status = "processing",
-            CreatedAt = history.CreatedAt
+            ExportId = jobId,
+            Status = "pending",
+            CreatedAt = DateTime.UtcNow
         };
     }
 
@@ -255,20 +244,48 @@ public class ReportExportService : IReportExportService
         Guid exportId, 
         CancellationToken cancellationToken = default)
     {
-        var history = await _context.ReportExportHistories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == exportId, cancellationToken);
+        var status = await _jobQueueService.GetStatusAsync(exportId, cancellationToken);
+        
+        if (status == null)
+        {
+            // 回退到直接查询数据库
+            var history = await _context.ReportExportHistories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == exportId, cancellationToken);
 
-        if (history == null) return null;
+            if (history == null) return null;
+
+            return new ExportProgressResponse
+            {
+                ExportId = history.Id,
+                Status = history.Status,
+                RecordCount = history.RecordCount,
+                FileSize = history.FileSize,
+                ErrorMessage = history.ErrorMessage,
+                CompletedAt = history.CompletedAt
+            };
+        }
+
+        // 计算进度百分比
+        double? progressPercent = null;
+        if (status.Status == "processing" && status.RecordCount.HasValue)
+        {
+            var total = await _dataService.GetTotalCountAsync(status.JobId, null, cancellationToken);
+            if (total > 0)
+            {
+                progressPercent = Math.Min(100, (double)status.RecordCount.Value / total * 100);
+            }
+        }
 
         return new ExportProgressResponse
         {
-            ExportId = history.Id,
-            Status = history.Status,
-            RecordCount = history.RecordCount,
-            FileSize = history.FileSize,
-            ErrorMessage = history.ErrorMessage,
-            CompletedAt = history.CompletedAt
+            ExportId = status.JobId,
+            Status = status.Status,
+            RecordCount = status.RecordCount,
+            FileSize = status.FileSize,
+            ProgressPercentage = progressPercent,
+            ErrorMessage = status.ErrorMessage,
+            CompletedAt = status.CompletedAt
         };
     }
 
@@ -276,6 +293,17 @@ public class ReportExportService : IReportExportService
         Guid exportId, 
         CancellationToken cancellationToken = default)
     {
+        // 先检查队列状态
+        var status = await _jobQueueService.GetStatusAsync(exportId, cancellationToken);
+        
+        if (status?.Status == "completed" && !string.IsNullOrEmpty(status.FilePath) && File.Exists(status.FilePath))
+        {
+            var fileName = Path.GetFileName(status.FilePath);
+            var stream = File.OpenRead(status.FilePath);
+            return (fileName, stream);
+        }
+
+        // 回退到数据库查询
         var history = await _context.ReportExportHistories
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == exportId && e.Status == "completed", cancellationToken);
@@ -283,9 +311,9 @@ public class ReportExportService : IReportExportService
         if (history?.FilePath == null || !File.Exists(history.FilePath))
             return null;
 
-        var fileName = Path.GetFileName(history.FilePath);
-        var stream = File.OpenRead(history.FilePath);
-        return (fileName, stream);
+        var dbFileName = Path.GetFileName(history.FilePath);
+        var dbStream = File.OpenRead(history.FilePath);
+        return (dbFileName, dbStream);
     }
 
     #region 私有方法
@@ -298,75 +326,9 @@ public class ReportExportService : IReportExportService
             .FirstOrDefaultAsync(r => r.Id == id && r.IsActive, ct);
 
         if (report == null)
-            throw new InvalidOperationException($"Report definition {id} not found");
+            throw new InvalidOperationException($"报表定义 {id} 不存在");
 
         return report;
-    }
-
-    private async Task ExecuteExportAsync(
-        Guid exportId, 
-        ReportDefinition report, 
-        ExportReportRequest request)
-    {
-        var fileName = $"{request.FileName ?? report.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}";
-        var extension = request.Format.ToLower() switch
-        {
-            "csv" => ".csv",
-            "excel" or "xlsx" => ".xlsx",
-            "json" => ".json",
-            _ => ".txt"
-        };
-
-        var uploadsPath = Path.Combine(_environment.WebRootPath ?? "wwwroot", "exports");
-        Directory.CreateDirectory(uploadsPath);
-        var filePath = Path.Combine(uploadsPath, $"{fileName}{extension}");
-
-        Stream? exportStream = null;
-        try
-        {
-            exportStream = request.Format.ToLower() switch
-            {
-                "csv" => await ExportToCsvAsync(request.ReportDefinitionId, request.Parameters),
-                "excel" or "xlsx" => await ExportToExcelAsync(request.ReportDefinitionId, request.Parameters),
-                "json" => await ExportToJsonAsync(request.ReportDefinitionId, request.Parameters),
-                _ => throw new NotSupportedException($"Format {request.Format} not supported")
-            };
-
-            // 保存到文件
-            using var fileStream = File.Create(filePath);
-            await exportStream.CopyToAsync(fileStream);
-            
-            var fileInfo = new FileInfo(filePath);
-            
-            await UpdateExportStatusAsync(
-                exportId, 
-                "completed", 
-                filePath: filePath, 
-                fileSize: fileInfo.Length);
-        }
-        finally
-        {
-            exportStream?.Dispose();
-        }
-    }
-
-    private async Task UpdateExportStatusAsync(
-        Guid exportId, 
-        string status, 
-        string? filePath = null, 
-        long? fileSize = null,
-        string? errorMessage = null)
-    {
-        var history = await _context.ReportExportHistories.FindAsync(exportId);
-        if (history == null) return;
-
-        history.Status = status;
-        history.FilePath = filePath;
-        history.FileSize = fileSize;
-        history.ErrorMessage = errorMessage;
-        history.CompletedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
     }
 
     private string? FormatValue(object? value, string? format)

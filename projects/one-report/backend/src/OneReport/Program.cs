@@ -1,9 +1,10 @@
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OneReport.Data;
+using OneReport.Services.Background;
 using OneReport.Services.Implementations;
 using OneReport.Services.Interfaces;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "OneReport API", Version = "v1" });
+    
+    // 添加XML注释
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 // ========================================
@@ -85,8 +94,8 @@ if (!string.IsNullOrWhiteSpace(redisConnection))
     // 使用 Redis
     try
     {
-        var redis = ConnectionMultiplexer.Connect(redisConnection);
-        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        var redis = StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnection);
+        builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(redis);
         builder.Services.AddSingleton<ICacheService, RedisCacheService>();
         Console.WriteLine("[Cache] Using Redis");
     }
@@ -105,11 +114,30 @@ else
     Console.WriteLine("[Cache] Using MemoryCache (fallback mode)");
 }
 
-// 注册业务服务
+// ========================================
+// HTTP Client 配置
+// ========================================
+builder.Services.AddHttpClient();
+
+// ========================================
+// 业务服务注册
+// ========================================
 builder.Services.AddScoped<IReportDefinitionService, ReportDefinitionService>();
 builder.Services.AddScoped<IReportDataService, ReportDataService>();
 builder.Services.AddScoped<IReportExportService, ReportExportService>();
 builder.Services.AddScoped<IDataSourceService, DataSourceService>();
+builder.Services.AddScoped<IApiDataSourceService, ApiDataSourceService>();
+builder.Services.AddScoped<IExportJobQueueService, ExportJobQueueService>();
+
+// ========================================
+// 后台服务注册
+// ========================================
+builder.Services.AddHostedService<ExportJobBackgroundService>();
+
+// ========================================
+// 定时任务清理服务
+// ========================================
+builder.Services.AddHostedService<ExportCleanupBackgroundService>();
 
 // 配置 CORS
 builder.Services.AddCors(options =>

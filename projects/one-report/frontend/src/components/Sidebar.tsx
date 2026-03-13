@@ -9,9 +9,9 @@ import {
   Filter, 
   CalendarRange 
 } from 'lucide-react';
-import { useReportStore } from '../../store';
-import { componentLibrary, categories } from '../../config/componentLibrary';
-import type { ComponentType } from '../../types';
+import { useReportStore } from '../../store/index.js';
+import { componentLibrary, categories } from '../../config/componentLibrary.js';
+import type { ComponentType } from '../../types/index.js';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Table2,
@@ -26,7 +26,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export function Sidebar() {
   const [activeCategory, setActiveCategory] = useState('all');
-  const addComponent = useReportStore((state) => state.addComponent);
 
   const filteredComponents = activeCategory === 'all'
     ? componentLibrary
@@ -42,7 +41,7 @@ export function Sidebar() {
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-sm font-medium text-gray-900 dark:text-white mb-3">组件库</h2>
         <div className="flex flex-wrap gap-1">
-          {categories.map(cat => (
+          {categories.map((cat: { id: string; name: string }) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
@@ -60,7 +59,7 @@ export function Sidebar() {
       
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-2 gap-2">
-          {filteredComponents.map(comp => {
+          {filteredComponents.map((comp: typeof componentLibrary[0]) => {
             const Icon = iconMap[comp.icon];
             return (
               <div

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useReportStore } from '../store';
+import { useReportStore } from '../store/index.js';
 import { Eye, EyeOff, ZoomIn, ZoomOut, Grid3x3 } from 'lucide-react';
 
 interface LayoutProps {
@@ -15,7 +15,6 @@ export function Layout({ children }: LayoutProps) {
     togglePreview, 
     setScale,
     toggleSnapToGrid,
-    updateConfig,
   } = useReportStore();
 
   return (
