@@ -1,5 +1,5 @@
 /**
- * 评论项组件 - 支持嵌套回复
+ * 评论项组件 - 支持嵌套回复 + 暗色模式完善
  */
 import { useState } from 'react';
 import { MessageCircle, ThumbsUp, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
@@ -64,29 +64,29 @@ export function CommentItem({
   };
 
   return (
-    <div className={`${depth > 0 ? 'ml-12 mt-4' : ''}`}>
+    <div className={`${depth > 0 ? 'ml-8 md:ml-12 mt-4' : ''}`}>
       <div className="flex space-x-3">
         {/* 用户头像 */}
         <div className="flex-shrink-0">
           <img
             src={comment.author.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest'}
             alt={comment.author.name}
-            className="w-10 h-10 rounded-full bg-gray-100 object-cover"
+            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-100 dark:bg-gray-700 object-cover"
           />
         </div>
 
         {/* 评论内容 */}
         <div className="flex-1 min-w-0">
           {/* 头部信息 */}
-          <div className="flex items-center space-x-2 mb-1">
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1">
+            <span className="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100">
               {comment.author.name}
             </span>
-            <span className="text-sm text-gray-400">
+            <span className="text-xs md:text-sm text-gray-400 dark:text-gray-500">
               {formatDate(comment.createdAt)}
             </span>
             {comment.updatedAt !== comment.createdAt && (
-              <span className="text-xs text-gray-400">(已编辑)</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">(已编辑)</span>
             )}
           </div>
 
@@ -99,17 +99,17 @@ export function CommentItem({
               className="mt-2"
             />
           ) : (
-            <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+            <div className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
               {comment.content}
             </div>
           )}
 
           {/* 操作按钮 */}
           {!isEditing && (
-            <div className="flex items-center space-x-4 mt-2">
+            <div className="flex items-center space-x-3 md:space-x-4 mt-2">
               <button
                 onClick={() => onLike?.(comment.id)}
-                className="flex items-center space-x-1 text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 <ThumbsUp className="w-4 h-4" />
                 <span>{(comment as any).likeCount || 0}</span>
@@ -119,7 +119,10 @@ export function CommentItem({
                 onClick={() => setIsReplying(!isReplying)}
                 className={`
                   flex items-center space-x-1 text-sm transition-colors
-                  ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}
+                  ${isReplying 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400'
+                  }
                 `}
               >
                 <MessageCircle className="w-4 h-4" />
@@ -131,7 +134,7 @@ export function CommentItem({
                 <div className="relative">
                   <button
                     onClick={() => setShowActions(!showActions)}
-                    className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
