@@ -2,9 +2,7 @@
 
 ## 预览
 
-![首页预览][SCREENSHOT:homepage]
-
-[SCREENSHOT:homepage]: 待补充 - 首页完整截图（M4 阶段由 Kimi 自动截图替换）
+![首页预览](./docs/screenshots/homepage.png)
 
 ---
 
