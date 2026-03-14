@@ -5,3 +5,7 @@ export { PropertyPanel } from './PropertyPanel';
 export { DataSourceModal } from './DataSourceModal';
 export { DataPreviewTable } from './DataPreviewTable';
 export { ChartBindingPanel } from './ChartBindingPanel';
+export { FieldMappingPanel } from './FieldMappingPanel';
+export type { ChartType, FieldMappingConfig } from './FieldMappingPanel';
+export { QueryParamsPanel } from './QueryParamsPanel';
+export type { QueryParamConfig, QueryParamValues, QueryParamType } from './QueryParamsPanel';

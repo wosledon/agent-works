@@ -11,20 +11,45 @@ import { DateRangeComponent } from './DateRangeComponent';
 interface ComponentRendererProps {
   component: ReportComponent;
   isPreview?: boolean;
+  onUpdateProps?: (props: Record<string, unknown>) => void;
 }
 
-export function ComponentRenderer({ component, isPreview = false }: ComponentRendererProps) {
-  const { type, props, style } = component;
+export function ComponentRenderer({ component, isPreview = false, onUpdateProps }: ComponentRendererProps) {
+  const { type, props, style, dataSourceId, dataMapping } = component;
 
   switch (type) {
     case 'table':
       return <TableComponent props={props} style={style} />;
     case 'chart-bar':
-      return <BarChartComponent props={props} style={style} />;
+      return (
+        <BarChartComponent 
+          props={props} 
+          style={style} 
+          dataSourceId={dataSourceId}
+          dataMapping={dataMapping}
+          onUpdateProps={onUpdateProps}
+        />
+      );
     case 'chart-line':
-      return <LineChartComponent props={props} style={style} />;
+      return (
+        <LineChartComponent 
+          props={props} 
+          style={style}
+          dataSourceId={dataSourceId}
+          dataMapping={dataMapping}
+          onUpdateProps={onUpdateProps}
+        />
+      );
     case 'chart-pie':
-      return <PieChartComponent props={props} style={style} />;
+      return (
+        <PieChartComponent 
+          props={props} 
+          style={style}
+          dataSourceId={dataSourceId}
+          dataMapping={dataMapping}
+          onUpdateProps={onUpdateProps}
+        />
+      );
     case 'text':
       return <TextComponent props={props} style={style} isPreview={isPreview} />;
     case 'image':

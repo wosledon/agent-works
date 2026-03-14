@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+export * from './useChartData';
+
 /**
  * 本地存储 Hook
  */
