@@ -55,7 +55,11 @@ body {
   min-height: 100vh;
 }
 
-/* Markdown Editor 自定义样式 */
+/* ============================================
+   Markdown Editor 自定义样式 - 完整暗色支持
+   ============================================ */
+
+/* 基础编辑器样式 */
 .w-md-editor {
   border: none !important;
   border-radius: 0 !important;
@@ -110,17 +114,39 @@ body {
   background-color: #4b5563 !important;
 }
 
-/* Prose 样式覆盖 */
-.prose pre {
-  background-color: #1f2937;
-  color: #f3f4f6;
+/* 编辑器 textarea 暗色样式 */
+.dark .w-md-editor-text-input {
+  color: #e5e7eb !important;
+  background-color: #1f2937 !important;
 }
 
+/* ============================================
+   Markdown 预览样式 - 代码块高亮
+   ============================================ */
+
+/* 代码块基础样式 */
+.w-md-editor-preview pre,
+.prose pre {
+  background-color: #1f2937 !important;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.dark .w-md-editor-preview pre,
+.dark .prose pre {
+  background-color: #111827 !important;
+  border: 1px solid #374151;
+}
+
+/* 行内代码样式 */
 .prose code {
   background-color: #f3f4f6;
+  color: #374151;
   padding: 0.2em 0.4em;
   border-radius: 0.25em;
   font-size: 0.875em;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, 'Courier New', monospace;
 }
 
 .dark .prose code {
@@ -129,11 +155,64 @@ body {
 }
 
 .prose pre code {
-  background-color: transparent;
+  background-color: transparent !important;
   padding: 0;
+  color: inherit;
 }
 
-/* 暗色模式 prose */
+/* 语法高亮 - 亮色模式 */
+.w-md-editor-preview pre code,
+.prose pre code {
+  color: #e5e7eb;
+}
+
+/* 关键字 */
+.w-md-editor-preview pre code .token.keyword,
+.prose pre code .token.keyword {
+  color: #c084fc;
+}
+
+/* 字符串 */
+.w-md-editor-preview pre code .token.string,
+.prose pre code .token.string {
+  color: #86efac;
+}
+
+/* 注释 */
+.w-md-editor-preview pre code .token.comment,
+.prose pre code .token.comment {
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* 函数 */
+.w-md-editor-preview pre code .token.function,
+.prose pre code .token.function {
+  color: #60a5fa;
+}
+
+/* 数字 */
+.w-md-editor-preview pre code .token.number,
+.prose pre code .token.number {
+  color: #fbbf24;
+}
+
+/* 操作符 */
+.w-md-editor-preview pre code .token.operator,
+.prose pre code .token.operator {
+  color: #f87171;
+}
+
+/* 类名 */
+.w-md-editor-preview pre code .token.class-name,
+.prose pre code .token.class-name {
+  color: #fbbf24;
+}
+
+/* ============================================
+   Prose 暗色模式覆盖
+   ============================================ */
+
 .dark .prose {
   color: #d1d5db;
 }
@@ -155,6 +234,10 @@ body {
   color: #60a5fa;
 }
 
+.dark .prose a:hover {
+  color: #93c5fd;
+}
+
 .dark .prose blockquote {
   border-left-color: #4b5563;
   color: #9ca3af;
@@ -164,7 +247,31 @@ body {
   border-color: #374151;
 }
 
-/* 滚动条样式 */
+.dark .prose ul > li::marker,
+.dark .prose ol > li::marker {
+  color: #6b7280;
+}
+
+.dark .prose table {
+  border-color: #374151;
+}
+
+.dark .prose thead {
+  background-color: #374151;
+}
+
+.dark .prose th {
+  color: #f3f4f6;
+}
+
+.dark .prose td {
+  border-color: #374151;
+}
+
+/* ============================================
+   滚动条样式
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -196,6 +303,20 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* 隐藏滚动条（用于工具栏） */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   实用工具类
+   ============================================ */
 
 /* 行数限制 */
 .line-clamp-2 {
@@ -242,4 +363,24 @@ body {
 
 .dark ::selection {
   background-color: rgba(59, 130, 246, 0.4);
+}
+
+/* ============================================
+   编辑器响应式优化
+   ============================================ */
+
+@media (max-width: 768px) {
+  .w-md-editor-show-live {
+    flex-direction: column !important;
+  }
+  
+  .w-md-editor-show-live .w-md-editor-area {
+    width: 100% !important;
+    height: 50% !important;
+  }
+  
+  .w-md-editor-show-live .w-md-editor-input {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
 }

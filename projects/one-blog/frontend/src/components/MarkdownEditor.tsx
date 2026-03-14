@@ -1,10 +1,13 @@
 /**
- * Markdown 编辑器组件
+ * Markdown 编辑器组件 - 暗色模式 + 移动端适配
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
-import { Eye, EyeOff, Image, Link as LinkIcon, Heading, Bold, Italic, Code, Quote, List, ListOrdered } from 'lucide-react';
+import { 
+  Eye, EyeOff, Image, Link as LinkIcon, Heading, Bold, Italic, Code, Quote, List, ListOrdered,
+  Smartphone, Monitor
+} from 'lucide-react';
 
 interface MarkdownEditorProps {
   value: string;
@@ -22,6 +25,41 @@ export function MarkdownEditor({
   preview = 'live',
 }: MarkdownEditorProps) {
   const [previewMode, setPreviewMode] = useState<'edit' | 'live' | 'preview'>(preview);
+  const [isDark, setIsDark] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测暗色模式和移动端
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkDarkMode();
+    checkMobile();
+
+    // 监听暗色模式变化
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', checkMobile);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // 移动端默认使用编辑模式
+  useEffect(() => {
+    if (isMobile && previewMode === 'live') {
+      setPreviewMode('edit');
+    }
+  }, [isMobile]);
 
   // 插入文本到编辑器
   const insertText = (before: string, after: string = '') => {
@@ -55,44 +93,60 @@ export function MarkdownEditor({
   ];
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+    <div className={`border rounded-lg overflow-hidden transition-colors ${isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
       {/* 工具栏 */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center space-x-1">
+      <div className={`flex items-center justify-between px-3 md:px-4 py-2 border-b transition-colors ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+        <div className="flex items-center space-x-0.5 md:space-x-1 overflow-x-auto scrollbar-hide">
           {toolbarButtons.map((btn) => (
             <button
               key={btn.label}
               type="button"
               onClick={btn.action}
               title={btn.label}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors"
+              className={`p-1.5 md:p-2 rounded transition-colors flex-shrink-0 ${
+                isDark 
+                  ? 'text-gray-400 hover:text-gray-100 hover:bg-gray-700' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+              }`}
             >
               <btn.icon className="w-4 h-4" />
             </button>
           ))}
         </div>
 
-        <div className="flex items-center space-x-2">
-          <div className="flex bg-gray-200 rounded-lg p-1">
+        <div className="flex items-center space-x-1 md:space-x-2">
+          {/* 移动端/桌面端模式指示 */}
+          <div className={`hidden md:flex items-center px-2 py-1 rounded text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            {isMobile ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+          </div>
+          <div className={`flex rounded-lg p-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
             <button
               type="button"
               onClick={() => setPreviewMode('edit')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
+              className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded transition-colors ${
                 previewMode === 'edit'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? isDark 
+                    ? 'bg-gray-600 text-gray-100 shadow-sm' 
+                    : 'bg-white text-gray-900 shadow-sm'
+                  : isDark 
+                    ? 'text-gray-400 hover:text-gray-200' 
+                    : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <EyeOff className="w-4 h-4 inline mr-1" />
-              编辑
+              <EyeOff className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" /
+              <span className="hidden md:inline">编辑</span>
             </button>
             <button
               type="button"
               onClick={() => setPreviewMode('live')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
+              className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded transition-colors hidden md:block ${
                 previewMode === 'live'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? isDark 
+                    ? 'bg-gray-600 text-gray-100 shadow-sm' 
+                    : 'bg-white text-gray-900 shadow-sm'
+                  : isDark 
+                    ? 'text-gray-400 hover:text-gray-200' 
+                    : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               分屏
@@ -100,21 +154,25 @@ export function MarkdownEditor({
             <button
               type="button"
               onClick={() => setPreviewMode('preview')}
-              className={`px-3 py-1 text-sm rounded transition-colors ${
+              className={`px-2 md:px-3 py-1 text-xs md:text-sm rounded transition-colors ${
                 previewMode === 'preview'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? isDark 
+                    ? 'bg-gray-600 text-gray-100 shadow-sm' 
+                    : 'bg-white text-gray-900 shadow-sm'
+                  : isDark 
+                    ? 'text-gray-400 hover:text-gray-200' 
+                    : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Eye className="w-4 h-4 inline mr-1" />
-              预览
+              <Eye className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" /
+              <span className="hidden md:inline">预览</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* 编辑器 */}
-      <div className="w-md-editor-container" data-color-mode="light">
+      <div className="w-md-editor-container" data-color-mode={isDark ? 'dark' : 'light'}>
         <MDEditor
           value={value}
           onChange={(val) => onChange(val || '')}
@@ -131,7 +189,7 @@ export function MarkdownEditor({
       </div>
 
       {/* 字数统计 */}
-      <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-sm text-gray-500">
+      <div className={`flex justify-between items-center px-4 py-2 border-t text-xs md:text-sm transition-colors ${isDark ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
         <span>{value.length} 字符</span>
         <span>{value.split(/\s+/).filter(Boolean).length} 词</span>
       </div>
@@ -139,15 +197,33 @@ export function MarkdownEditor({
   );
 }
 
-// Markdown 内容渲染组件
+// Markdown 内容渲染组件 - 暗色模式支持
 interface MarkdownPreviewProps {
   content: string;
   className?: string;
 }
 
 export function MarkdownPreview({ content, className = '' }: MarkdownPreviewProps) {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDarkMode();
+
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className={`prose prose-slate max-w-none ${className}`} data-color-mode="light">
+    <div 
+      className={`prose prose-slate dark:prose-invert max-w-none ${className}`} 
+      data-color-mode={isDark ? 'dark' : 'light'}
+    >
       <MDEditor.Markdown
         source={content}
         rehypePlugins={[[rehypeSanitize]]}
