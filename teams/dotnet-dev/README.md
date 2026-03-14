@@ -44,6 +44,7 @@ Frontend ↔ Backend 并行开发 → QA 测试 → 验收上线
 - 每次 spawn 必须显式指定 `输出到：projects/{name}/`
 - **Git 提交**：小步快跑，禁止攒代码，详见 [git-guidelines.md](./git-guidelines.md)
 - **云端组件**：必须支持本地/内存降级，详见 [cloud-component-guidelines.md](./cloud-component-guidelines.md)
+- **前端语言**：**强制 TypeScript**，禁止 JavaScript
 
 ## 截图流程（开发完成后）
 

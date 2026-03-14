@@ -10,7 +10,7 @@
 ## 技术栈
 
 - **框架**: React 18+ (Functional Components + Hooks)
-- **语言**: TypeScript (严格模式)
+- **语言**: **TypeScript (严格模式，强制)** ❌ 禁止 JavaScript
 - **样式**: Tailwind CSS / CSS Modules
 - **状态**: Zustand / Redux Toolkit / React Query
 - **路由**: React Router v6
