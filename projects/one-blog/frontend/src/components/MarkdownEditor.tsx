@@ -133,7 +133,7 @@ export function MarkdownEditor({
                     : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <EyeOff className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" /
+              <EyeOff className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" />
               <span className="hidden md:inline">编辑</span>
             </button>
             <button
@@ -164,7 +164,7 @@ export function MarkdownEditor({
                     : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Eye className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" /
+              <Eye className="w-3 h-3 md:w-4 md:h-4 inline md:mr-1" />
               <span className="hidden md:inline">预览</span>
             </button>
           </div>
