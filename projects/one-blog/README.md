@@ -92,21 +92,16 @@ one-blog/
 
 ---
 
-## 截图位置标记
+## 截图展示
 
-以下是 README 中需要补充的截图位置：
+| 页面 | 截图 | 说明 |
+|------|------|------|
+| 首页 | ![首页预览](./docs/screenshots/homepage.png) | 文章列表、标签筛选 |
+| 登录页 | ![登录页预览](./docs/screenshots/login.png) | 用户登录界面 |
+| 移动端 | ![移动端预览](./docs/screenshots/mobile.jpg) | 响应式移动端适配 |
+| 编辑器 | ![编辑器预览](./docs/screenshots/editor-redirect.png) | 需登录后访问（受保护路由） |
 
-<!-- SCREENSHOT: 登录页面 -->
-![登录页预览](./docs/screenshots/login.png)
-
-<!-- SCREENSHOT: 文章编辑页 -->
-![文章编辑页预览](./docs/screenshots/editor.png)
-
-<!-- SCREENSHOT: 管理后台 -->
-![管理后台预览](./docs/screenshots/admin.png)
-
-<!-- SCREENSHOT: 移动端首页 -->
-![移动端预览](./docs/screenshots/mobile.png)
+> **注**：管理后台页面需登录后访问，当前版本后台功能集成在编辑器中。
 
 ---
 
