@@ -24,17 +24,22 @@ public interface IReportExportService
     /// <summary>
     /// 导出报表为CSV格式 (流式)
     /// </summary>
-    Task<Stream> ExportToCsvAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, CancellationToken cancellationToken = default);
+    Task<Stream> ExportToCsvAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 导出报表为Excel格式 (流式)
     /// </summary>
-    Task<Stream> ExportToExcelAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, CancellationToken cancellationToken = default);
+    Task<Stream> ExportToExcelAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 导出报表为JSON格式 (流式)
     /// </summary>
-    Task<Stream> ExportToJsonAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, CancellationToken cancellationToken = default);
+    Task<Stream> ExportToJsonAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// 导出报表为PDF格式 (流式)
+    /// </summary>
+    Task<Stream> ExportToPdfAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 创建异步导出任务
@@ -60,17 +65,17 @@ public interface IReportDataService
     /// <summary>
     /// 预览报表数据 (分页)
     /// </summary>
-    Task<ReportPreviewResponse> PreviewAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<ReportPreviewResponse> PreviewAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 流式读取报表数据 (用于大批量导出，低内存占用)
     /// </summary>
-    IAsyncEnumerable<Dictionary<string, object>> StreamDataAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<Dictionary<string, object?>> StreamDataAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 获取报表总记录数
     /// </summary>
-    Task<long> GetTotalCountAsync(Guid reportDefinitionId, Dictionary<string, object>? parameters, CancellationToken cancellationToken = default);
+    Task<long> GetTotalCountAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 执行原始查询

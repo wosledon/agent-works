@@ -44,6 +44,7 @@ public class ReportExportsController : ControllerBase
                 "csv" => await _exportService.ExportToCsvAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
                 "excel" or "xlsx" => await _exportService.ExportToExcelAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
                 "json" => await _exportService.ExportToJsonAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
+                "pdf" => await _exportService.ExportToPdfAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
                 _ => throw new NotSupportedException($"不支持的导出格式: {request.Format}")
             };
 
@@ -123,6 +124,7 @@ public class ReportExportsController : ControllerBase
             "csv" => "text/csv",
             "excel" or "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "json" => "application/json",
+            "pdf" => "application/pdf",
             _ => "application/octet-stream"
         };
     }
@@ -134,6 +136,7 @@ public class ReportExportsController : ControllerBase
             "csv" => ".csv",
             "excel" or "xlsx" => ".xlsx",
             "json" => ".json",
+            "pdf" => ".pdf",
             _ => ".txt"
         };
     }

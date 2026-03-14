@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using Npgsql;
 using OneReport.Data;

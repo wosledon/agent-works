@@ -18,7 +18,7 @@ public class ExportReportRequest
     /// <summary>
     /// 查询参数 (JSON格式)
     /// </summary>
-    public Dictionary<string, object>? Parameters { get; set; }
+    public Dictionary<string, object?>? Parameters { get; set; }
     
     /// <summary>
     /// 分页大小 (0表示不分页，流式导出)
@@ -37,7 +37,7 @@ public class ExportReportRequest
 public class PreviewReportRequest
 {
     public Guid ReportDefinitionId { get; set; }
-    public Dictionary<string, object>? Parameters { get; set; }
+    public Dictionary<string, object?>? Parameters { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 100;
 }
@@ -58,5 +58,5 @@ public class ExecuteQueryRequest
 {
     public Guid DataSourceId { get; set; }
     public string Query { get; set; } = string.Empty;
-    public Dictionary<string, object>? Parameters { get; set; }
+    public Dictionary<string, object?>? Parameters { get; set; }
 }

@@ -42,7 +42,7 @@ public class PagedResponse<T>
 /// </summary>
 public class ReportPreviewResponse
 {
-    public List<Dictionary<string, object>> Data { get; set; } = new();
+    public List<Dictionary<string, object?>> Data { get; set; } = new();
     public List<ColumnMeta> Columns { get; set; } = new();
     public long TotalCount { get; set; }
     public int PageNumber { get; set; }
@@ -90,7 +90,7 @@ public class ExportProgressResponse
 /// </summary>
 public class QueryResultResponse
 {
-    public List<Dictionary<string, object>> Data { get; set; } = new();
+    public List<Dictionary<string, object?>> Data { get; set; } = new();
     public List<ColumnMeta> Columns { get; set; } = new();
     public long TotalCount { get; set; }
     public string? QueryExecutionTime { get; set; }

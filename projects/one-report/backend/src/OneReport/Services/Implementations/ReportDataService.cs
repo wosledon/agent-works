@@ -434,11 +434,11 @@ public class ReportDataService : IReportDataService
         CancellationToken cancellationToken)
     {
         var config = ParseDataSourceConfig(report.DataSourceConfig);
-        var apiUrl = config?.GetPropertyOrNull("apiUrl")?.GetString() 
+        var apiUrl = config?.RootElement.GetPropertyOrNull("apiUrl")?.GetString() 
             ?? GetConnectionString(report);
         
         var headers = ParseHeaders(config);
-        var method = config?.GetPropertyOrNull("method")?.GetString() ?? "GET";
+        var method = config?.RootElement.GetPropertyOrNull("method")?.GetString() ?? "GET";
 
         var result = new List<Dictionary<string, object?>>();
         var skip = (pageNumber - 1) * pageSize;
@@ -464,20 +464,20 @@ public class ReportDataService : IReportDataService
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var config = ParseDataSourceConfig(report.DataSourceConfig);
-        var apiUrl = config?.GetPropertyOrNull("apiUrl")?.GetString() 
+        var apiUrl = config?.RootElement.GetPropertyOrNull("apiUrl")?.GetString() 
             ?? GetConnectionString(report);
         
         var headers = ParseHeaders(config);
-        var method = config?.GetPropertyOrNull("method")?.GetString() ?? "GET";
-        var usePagination = config?.GetPropertyOrNull("usePagination")?.GetBoolean() ?? false;
+        var method = config?.RootElement.GetPropertyOrNull("method")?.GetString() ?? "GET";
+        var usePagination = config?.RootElement.GetPropertyOrNull("usePagination")?.GetBoolean() ?? false;
 
         if (usePagination)
         {
             await foreach (var row in _apiDataSourceService.QueryPagedAsync(
                 apiUrl, 
-                pageParamName: config?.GetPropertyOrNull("pageParam")?.GetString() ?? "page",
-                pageSizeParamName: config?.GetPropertyOrNull("pageSizeParam")?.GetString() ?? "pageSize",
-                pageSize: config?.GetPropertyOrNull("pageSize")?.GetInt32() ?? 100,
+                pageParamName: config?.RootElement.GetPropertyOrNull("pageParam")?.GetString() ?? "page",
+                pageSizeParamName: config?.RootElement.GetPropertyOrNull("pageSizeParam")?.GetString() ?? "pageSize",
+                pageSize: config?.RootElement.GetPropertyOrNull("pageSize")?.GetInt32() ?? 100,
                 method: method,
                 headers: headers,
                 cancellationToken: cancellationToken))

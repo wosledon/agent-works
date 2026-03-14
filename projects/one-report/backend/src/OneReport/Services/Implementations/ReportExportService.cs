@@ -10,6 +10,9 @@ using OneReport.Data.Entities;
 using OneReport.Models.Requests;
 using OneReport.Models.Responses;
 using OneReport.Services.Interfaces;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace OneReport.Services.Implementations;
 
@@ -207,6 +210,122 @@ public class ReportExportService : IReportExportService
         stream.Position = 0;
         _logger.LogInformation("JSON导出完成: {ReportId}, 共 {Count} 条记录", reportDefinitionId, recordCount);
         return stream;
+    }
+
+    /// <summary>
+    /// 导出报表为PDF格式 - 使用 QuestPDF 生成专业PDF报表
+    /// </summary>
+    public async Task<Stream> ExportToPdfAsync(
+        Guid reportDefinitionId, 
+        Dictionary<string, object?>? parameters, 
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
+        var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
+        
+        // 收集数据
+        var data = new List<Dictionary<string, object?>>();
+        long recordCount = 0;
+        await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
+        {
+            data.Add(row);
+            recordCount++;
+            
+            // PDF 导出限制数据量以避免内存问题
+            if (recordCount >= 10000)
+            {
+                _logger.LogWarning("PDF导出数据量超过10000条限制，已截断: {ReportId}", reportDefinitionId);
+                break;
+            }
+        }
+
+        // 配置 QuestPDF 许可证 (社区版)
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        // 生成PDF文档
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4.Landscape());
+                page.Margin(20);
+                page.Header().Element(header => BuildHeader(header, report.Name, columns));
+                page.Content().Element(content => BuildTableContent(content, columns, data));
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.Span("第 ");
+                    text.CurrentPageNumber();
+                    text.Span(" 页 / 共 ");
+                    text.TotalPages();
+                    text.Span(" 页");
+                });
+            });
+        });
+
+        var stream = new MemoryStream();
+        document.GeneratePdf(stream);
+        stream.Position = 0;
+        
+        _logger.LogInformation("PDF导出完成: {ReportId}, 共 {Count} 条记录", reportDefinitionId, recordCount);
+        return stream;
+    }
+
+    private void BuildHeader(IContainer container, string reportName, List<ReportColumn> columns)
+    {
+        container.Column(column =>
+        {
+            column.Item().AlignCenter().Text(reportName)
+                .FontSize(18).Bold();
+            
+            column.Item().PaddingVertical(5).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+            
+            column.Item().Text($"生成时间: {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
+                .FontSize(10).FontColor(Colors.Grey.Medium);
+        });
+    }
+
+    private void BuildTableContent(IContainer container, List<ReportColumn> columns, List<Dictionary<string, object?>> data)
+    {
+        container.Table(table =>
+        {
+            // 定义列
+            table.ColumnsDefinition(columnsDef =>
+            {
+                foreach (var _ in columns)
+                {
+                    columnsDef.RelativeColumn();
+                }
+            });
+
+            // 表头
+            table.Header(header =>
+            {
+                foreach (var col in columns)
+                {
+                    header.Cell().Background(Colors.Grey.Lighten3)
+                        .Border(0.5f).BorderColor(Colors.Grey.Medium)
+                        .Padding(5)
+                        .Text(col.DisplayName)
+                        .FontSize(10).Bold();
+                }
+            });
+
+            // 数据行
+            foreach (var row in data)
+            {
+                foreach (var col in columns)
+                {
+                    var value = row.GetValueOrDefault(col.FieldName);
+                    var formattedValue = FormatValue(value, col.Format) ?? string.Empty;
+                    
+                    table.Cell()
+                        .Border(0.5f).BorderColor(Colors.Grey.Lighten2)
+                        .Padding(3)
+                        .Text(formattedValue)
+                        .FontSize(9);
+                }
+            }
+        });
     }
 
     /// <summary>

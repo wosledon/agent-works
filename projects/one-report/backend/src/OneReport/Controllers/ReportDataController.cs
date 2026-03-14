@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using OneReport.Models.Requests;
 using OneReport.Models.Responses;
 using OneReport.Services.Interfaces;
@@ -6,7 +8,7 @@ using OneReport.Services.Interfaces;
 namespace OneReport.Controllers;
 
 /// <summary>
-/// 报表数据查询 API
+/// 报表数据查询 API - 支持流式查询
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -46,6 +48,23 @@ public class ReportDataController : ControllerBase
         {
             _logger.LogError(ex, "预览报表数据失败: {ReportId}", request.ReportDefinitionId);
             return BadRequest(ApiResponse<ReportPreviewResponse>.Fail("预览报表数据失败", new List<string> { ex.Message }));
+        }
+    }
+
+    /// <summary>
+    /// 流式读取报表数据 (Server-Sent Events / NDJSON)
+    /// </summary>
+    [HttpPost("stream")]
+    public async IAsyncEnumerable<Dictionary<string, object?>> StreamData(
+        [FromBody] PreviewReportRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var row in _dataService.StreamDataAsync(
+            request.ReportDefinitionId,
+            request.Parameters,
+            cancellationToken))
+        {
+            yield return row;
         }
     }
 

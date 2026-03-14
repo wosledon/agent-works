@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using OneReport.Services.Interfaces;
 
 namespace OneReport.Services.Background;
@@ -137,6 +138,7 @@ public class ExportJobBackgroundService : BackgroundService
                 "csv" => await exportService.ExportToCsvAsync(job.ReportDefinitionId, job.Parameters, cancellationToken),
                 "excel" or "xlsx" => await exportService.ExportToExcelAsync(job.ReportDefinitionId, job.Parameters, cancellationToken),
                 "json" => await exportService.ExportToJsonAsync(job.ReportDefinitionId, job.Parameters, cancellationToken),
+                "pdf" => await exportService.ExportToPdfAsync(job.ReportDefinitionId, job.Parameters, cancellationToken),
                 _ => throw new NotSupportedException($"不支持的导出格式: {job.Format}")
             };
 
@@ -199,6 +201,7 @@ public class ExportJobBackgroundService : BackgroundService
             "csv" => "csv",
             "excel" or "xlsx" => "xlsx",
             "json" => "json",
+            "pdf" => "pdf",
             _ => "txt"
         };
     }
