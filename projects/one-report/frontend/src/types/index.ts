@@ -9,7 +9,7 @@ export type ComponentType =
   | 'filter' 
   | 'date-range';
 
-// 组件样式
+// 组件样式 - Fluent Design 风格
 export interface ComponentStyle {
   x: number;
   y: number;
@@ -22,6 +22,8 @@ export interface ComponentStyle {
   fontSize?: number;
   color?: string;
   padding?: number;
+  shadow?: 'none' | 'small' | 'medium' | 'large';
+  opacity?: number;
 }
 
 // 数据源配置
@@ -30,6 +32,10 @@ export interface DataSource {
   name: string;
   type: 'api' | 'static' | 'file' | 'database';
   config: DataSourceConfig;
+  testStatus?: 'untested' | 'testing' | 'success' | 'error';
+  testMessage?: string;
+  lastTested?: string;
+  data?: unknown[];
 }
 
 export interface DataSourceConfig {
@@ -42,6 +48,14 @@ export interface DataSourceConfig {
   connectionString?: string;
   tableName?: string;
   sql?: string;
+  staticData?: string;
+}
+
+// 数据字段映射
+export interface DataMapping {
+  field: string;
+  label: string;
+  type: 'string' | 'number' | 'date' | 'boolean';
 }
 
 // 报表组件
@@ -52,6 +66,7 @@ export interface ReportComponent {
   props: ComponentProps;
   style: ComponentStyle;
   dataSourceId?: string;
+  dataMapping?: DataMapping[];
 }
 
 // 组件属性
@@ -61,8 +76,13 @@ export interface ComponentProps {
   columns?: TableColumn[];
   xAxis?: string;
   yAxis?: string;
+  categoryField?: string;
+  valueField?: string;
+  nameField?: string;
   text?: string;
   src?: string;
+  placeholder?: string;
+  dataSourceId?: string;
   [key: string]: unknown;
 }
 
@@ -73,6 +93,29 @@ export interface TableColumn {
   dataIndex: string;
   width?: number;
   align?: 'left' | 'center' | 'right';
+}
+
+// 主题配置 - Fluent Design
+export interface ThemeConfig {
+  name: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    success: string;
+    warning: string;
+    error: string;
+    info: string;
+  };
+  borderRadius: {
+    small: number;
+    medium: number;
+    large: number;
+  };
+  shadows: {
+    small: string;
+    medium: string;
+    large: string;
+  };
 }
 
 // 报表配置

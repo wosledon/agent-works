@@ -17,6 +17,10 @@ public class AppDbContext : DbContext
     public DbSet<ReportColumn> ReportColumns { get; set; }
     public DbSet<ReportExportHistory> ReportExportHistories { get; set; }
     public DbSet<DataSource> DataSources { get; set; }
+    public DbSet<ReportExecutionLog> ReportExecutionLogs { get; set; }
+    public DbSet<QueryResultCache> QueryResultCaches { get; set; }
+    public DbSet<UserPermission> UserPermissions { get; set; }
+    public DbSet<UserRole> UserRoles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +31,10 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new ReportColumnConfiguration());
         modelBuilder.ApplyConfiguration(new ReportExportHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new DataSourceConfiguration());
+        modelBuilder.ApplyConfiguration(new ReportExecutionLogConfiguration());
+        modelBuilder.ApplyConfiguration(new QueryResultCacheConfiguration());
+        modelBuilder.ApplyConfiguration(new UserPermissionConfiguration());
+        modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
     }
 }
 

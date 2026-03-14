@@ -60,3 +60,54 @@ public class ExecuteQueryRequest
     public string Query { get; set; } = string.Empty;
     public Dictionary<string, object?>? Parameters { get; set; }
 }
+
+// ========================================
+// M3: 新增请求模型
+// ========================================
+
+/// <summary>
+/// 查询执行日志请求
+/// </summary>
+public class QueryExecutionLogsRequest
+{
+    public Guid? ReportDefinitionId { get; set; }
+    public string? OperationType { get; set; }
+    public string? Status { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public Guid? ExecutedBy { get; set; }
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+}
+
+/// <summary>
+/// 清理执行日志请求
+/// </summary>
+public class CleanupExecutionLogsRequest
+{
+    /// <summary>
+    /// 保留最近多少天的日志
+    /// </summary>
+    public int KeepDays { get; set; } = 30;
+}
+
+/// <summary>
+/// 清理过期缓存请求
+/// </summary>
+public class CleanupCacheRequest
+{
+    /// <summary>
+    /// 强制清理所有过期缓存
+    /// </summary>
+    public bool ForceExpiredOnly { get; set; } = true;
+}
+
+/// <summary>
+/// 获取执行统计请求
+/// </summary>
+public class GetExecutionStatsRequest
+{
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public Guid? ReportDefinitionId { get; set; }
+}

@@ -129,3 +129,108 @@ public class DataSourceConfiguration : IEntityTypeConfiguration<DataSource>
         builder.HasIndex(e => e.IsActive);
     }
 }
+
+public class ReportExecutionLogConfiguration : IEntityTypeConfiguration<ReportExecutionLog>
+{
+    public void Configure(EntityTypeBuilder<ReportExecutionLog> builder)
+    {
+        builder.ToTable("report_execution_logs");
+        
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.OperationType)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.Property(e => e.Status)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.Property(e => e.Parameters)
+            .HasColumnType("jsonb");
+        
+        builder.Property(e => e.ErrorMessage)
+            .HasColumnType("text");
+        
+        builder.Property(e => e.ExportFormat)
+            .HasMaxLength(50);
+        
+        builder.Property(e => e.ClientIp)
+            .HasMaxLength(50);
+        
+        builder.HasIndex(e => e.ReportDefinitionId);
+        builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => e.StartedAt);
+        builder.HasIndex(e => e.ExecutedBy);
+        
+        // 复合索引：报表ID + 执行时间
+        builder.HasIndex(e => new { e.ReportDefinitionId, e.StartedAt });
+    }
+}
+
+public class QueryResultCacheConfiguration : IEntityTypeConfiguration<QueryResultCache>
+{
+    public void Configure(EntityTypeBuilder<QueryResultCache> builder)
+    {
+        builder.ToTable("query_result_caches");
+        
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.CacheKey)
+            .HasMaxLength(500)
+            .IsRequired();
+        
+        builder.Property(e => e.Parameters)
+            .HasColumnType("jsonb");
+        
+        builder.Property(e => e.Data)
+            .HasColumnType("jsonb")
+            .IsRequired();
+        
+        builder.HasIndex(e => e.CacheKey)
+            .IsUnique();
+        builder.HasIndex(e => e.ReportDefinitionId);
+        builder.HasIndex(e => e.ExpiresAt);
+        
+        // 用于清理过期缓存
+        builder.HasIndex(e => new { e.ExpiresAt, e.HitCount });
+    }
+}
+
+public class UserPermissionConfiguration : IEntityTypeConfiguration<UserPermission>
+{
+    public void Configure(EntityTypeBuilder<UserPermission> builder)
+    {
+        builder.ToTable("user_permissions");
+        
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.ResourceType)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.Property(e => e.Permission)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.HasIndex(e => e.UserId);
+        builder.HasIndex(e => new { e.UserId, e.ResourceType, e.ResourceId });
+    }
+}
+
+public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
+{
+    public void Configure(EntityTypeBuilder<UserRole> builder)
+    {
+        builder.ToTable("user_roles");
+        
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.Role)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.HasIndex(e => e.UserId)
+            .IsUnique();
+    }
+}
