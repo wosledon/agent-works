@@ -1,11 +1,11 @@
 /**
- * 文章编辑器页面
+ * 文章编辑器页面 - 移动端适配 + 暗色模式
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useBlogStore, useAuthStore } from '../store';
 import { MarkdownEditor } from '../components/MarkdownEditor';
-import { Save, ArrowLeft, Loader2, Image, Tag as TagIcon } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image, Tag as TagIcon, ChevronDown, ChevronUp } from 'lucide-react';
 
 export function EditorPage() {
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ export function EditorPage() {
   const [coverImage, setCoverImage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // 加载现有文章数据
   useEffect(() => {
@@ -103,54 +104,68 @@ export function EditorPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between mb-6">
+      {/* 顶部工具栏 - 移动端适配 */}
+      <div className="flex items-center justify-between mb-4 md:mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-gray-500 hover:text-gray-900 transition-colors"
+          className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 mr-1" />
-          返回
+          <span className="hidden sm:inline">返回</span>
         </button>
 
-        <button
-          onClick={handleSubmit}
-          disabled={isSaving}
-          className="flex items-center px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              保存中...
-            </>
-          ) : (
-            <>
-              <Save className="w-5 h-5 mr-2" />
-              {isEditing ? '更新' : '发布'}
-            </>
-          )}
-        </button>
+        {/* 移动端：设置按钮 */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="md:hidden flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            {showSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span>设置</span>
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="flex items-center px-4 md:px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm md:text-base"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2 animate-spin" />
+                <span className="hidden sm:inline">保存中...</span>
+                <span className="sm:hidden">...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
+                {isEditing ? '更新' : '发布'}
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 标题输入 */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+        {/* 标题输入 - 始终在顶部 */}
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 md:p-6 transition-colors">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              文章标题
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="输入文章标题..."
+              className="w-full px-4 py-3 text-lg md:text-xl font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            />
+          </div>
+        </div>
+
+        {/* 设置面板 - 桌面端始终显示，移动端可折叠 */}
+        <div className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 md:p-6 transition-colors ${!showSettings ? 'hidden md:block' : ''}`}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                文章标题
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="输入文章标题..."
-                className="w-full px-4 py-3 text-xl font-bold border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 文章摘要
               </label>
               <textarea
@@ -158,12 +173,12 @@ export function EditorPage() {
                 onChange={(e) => setExcerpt(e.target.value)}
                 placeholder="输入文章摘要（可选，留空将自动生成）..."
                 rows={2}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 封面图片 URL
               </label>
               <div className="relative">
@@ -173,13 +188,13 @@ export function EditorPage() {
                   value={coverImage}
                   onChange={(e) => setCoverImage(e.target.value)}
                   placeholder="https://example.com/image.jpg"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 标签
               </label>
               <div className="flex flex-wrap gap-2">
@@ -188,10 +203,10 @@ export function EditorPage() {
                     key={tag.id}
                     type="button"
                     onClick={() => toggleTag(tag.id)}
-                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center px-2.5 md:px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition-colors ${
                       selectedTags.includes(tag.id)
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                   >
                     <TagIcon className="w-3 h-3 mr-1" />
@@ -205,14 +220,14 @@ export function EditorPage() {
 
         {/* Markdown 编辑器 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             文章内容
           </label>
           <MarkdownEditor
             value={content}
             onChange={setContent}
             placeholder="开始写作... 支持 Markdown 语法"
-            height={600}
+            height={typeof window !== 'undefined' && window.innerWidth < 768 ? 400 : 600}
           />
         </div>
       </form>
