@@ -98,10 +98,8 @@ one-blog/
 |------|------|------|
 | 首页 | ![首页预览](./docs/screenshots/homepage.png) | 文章列表、标签筛选 |
 | 登录页 | ![登录页预览](./docs/screenshots/login.png) | 用户登录界面 |
+| 编辑器 | ![编辑器预览](./docs/screenshots/editor.png) | Markdown 文章编辑器（需登录） |
 | 移动端 | ![移动端预览](./docs/screenshots/mobile.jpg) | 响应式移动端适配 |
-| 编辑器 | ![编辑器预览](./docs/screenshots/editor-redirect.png) | 需登录后访问（受保护路由） |
-
-> **注**：管理后台页面需登录后访问，当前版本后台功能集成在编辑器中。
 
 ---
 
