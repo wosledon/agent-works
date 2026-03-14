@@ -116,6 +116,9 @@ public class QueryResultCache
     public DateTime ExpiresAt { get; set; }
     public int HitCount { get; set; } = 0;
     public DateTime? LastHitAt { get; set; }
+    
+    // 导航属性
+    public ReportDefinition? ReportDefinition { get; set; }
 }
 
 /// <summary>
