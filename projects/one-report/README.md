@@ -9,10 +9,10 @@
 
 | 功能模块 | 截图 |
 |---------|------|
-| 报表设计器 | [SCREENSHOT:designer] |
-| 数据源管理 | [SCREENSHOT:datasource] |
-| 报表预览 | [SCREENSHOT:preview] |
-| 导出管理 | [SCREENSHOT:export] |
+| 报表设计器 | ![报表设计器](./docs/screenshots/designer.png) |
+| 数据源管理 | [待截图] |
+| 报表预览 | [待截图] |
+| 导出管理 | [待截图] |
 
 ---
 
