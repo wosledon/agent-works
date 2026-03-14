@@ -14,13 +14,17 @@ import {
   XCircle,
   HelpCircle,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Link2,
+  X
 } from 'lucide-react';
 import { DataSourceModal } from './DataSourceModal';
+import { ChartBindingPanel } from './ChartBindingPanel';
 import type { DataSource, ReportComponent } from '~/types';
 
 export function PropertyPanel() {
   const [activeTab, setActiveTab] = useState<'properties' | 'data' | 'canvas'>('properties');
+  const [showBindingPanel, setShowBindingPanel] = useState(false);
   
   const {
     config,
@@ -38,6 +42,7 @@ export function PropertyPanel() {
     testDataSource,
     updateConfig,
     refreshComponentData,
+    updateComponent,
   } = useReportStore();
 
   const { components, dataSources } = config;
@@ -52,6 +57,19 @@ export function PropertyPanel() {
   const handleEditDataSource = (ds: DataSource) => {
     setEditingDataSource(ds);
     setShowDataSourceModal(true);
+  };
+
+  // 处理数据源绑定
+  const handleUpdateDataSource = (componentId: string, dataSourceId: string) => {
+    updateComponentProps(componentId, { dataSourceId: dataSourceId || undefined });
+    if (dataSourceId) {
+      refreshComponentData(componentId);
+    }
+  };
+
+  // 处理数据映射更新
+  const handleUpdateDataMapping = (componentId: string, mapping: Array<{ field: string; label: string; type: string }>) => {
+    updateComponent(componentId, { dataMapping: mapping });
   };
 
   return (
@@ -87,6 +105,7 @@ export function PropertyPanel() {
               onUpdateStyle={updateComponentStyle}
               onRemove={removeComponent}
               onRefreshData={refreshComponentData}
+              onOpenBindingPanel={() => setShowBindingPanel(true)}
             />
           )}
           
@@ -115,6 +134,7 @@ export function PropertyPanel() {
         </div>
       </aside>
 
+      {/* 数据源模态框 */}
       {showDataSourceModal && (
         <DataSourceModal
           dataSource={editingDataSource}
@@ -130,6 +150,25 @@ export function PropertyPanel() {
           onTest={testDataSource}
         />
       )}
+
+      {/* 数据绑定面板 */}
+      {showBindingPanel && selectedComponent && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div 
+            className="flex-1 bg-black/20" 
+            onClick={() => setShowBindingPanel(false)}
+          />
+          <ChartBindingPanel
+            component={selectedComponent}
+            dataSources={dataSources}
+            onUpdateDataSource={(dsId) => handleUpdateDataSource(selectedComponent.id, dsId)}
+            onUpdateDataMapping={(mapping) => handleUpdateDataMapping(selectedComponent.id, mapping)}
+            onUpdateProps={(props) => updateComponentProps(selectedComponent.id, props)}
+            onTestDataSource={testDataSource}
+            onClose={() => setShowBindingPanel(false)}
+          />
+        </div>
+      )}
     </>
   );
 }
@@ -141,9 +180,18 @@ interface ComponentPropertiesProps {
   onUpdateStyle: (id: string, style: Record<string, unknown>) => void;
   onRemove: (id: string) => void;
   onRefreshData: (id: string) => Promise<void>;
+  onOpenBindingPanel: () => void;
 }
 
-function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateStyle, onRemove, onRefreshData }: ComponentPropertiesProps) {
+function ComponentProperties({ 
+  component, 
+  dataSources, 
+  onUpdateProps, 
+  onUpdateStyle, 
+  onRemove, 
+  onRefreshData,
+  onOpenBindingPanel 
+}: ComponentPropertiesProps) {
   const { props, style, type } = component;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -153,6 +201,9 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
     await onRefreshData(component.id);
     setIsRefreshing(false);
   };
+
+  // 判断是否支持数据绑定
+  const supportsDataBinding = ['table', 'chart-bar', 'chart-line', 'chart-pie'].includes(type);
 
   return (
     <div className="space-y-6">
@@ -167,8 +218,8 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
         </button>
       </div>
 
-      {/* 数据源绑定 */}
-      {(type === 'table' || type === 'chart-bar' || type === 'chart-line' || type === 'chart-pie') && (
+      {/* 数据源绑定区域 */}
+      {supportsDataBinding && (
         <div className="space-y-3 p-3 bg-[var(--fluent-neutral-4)] rounded-lg">
           <h4 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase flex items-center gap-1">
             <Database className="w-3 h-3" />
@@ -189,14 +240,58 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
           </select>
           
           {component.dataSourceId && (
-            <button
-              onClick={handleRefreshData}
-              disabled={isRefreshing}
-              className="fluent-btn fluent-btn-secondary w-full text-xs"
-            >
-              <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'fluent-spin' : ''}`} />
-              刷新数据
-            </button>
+            <>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRefreshData}
+                  disabled={isRefreshing}
+                  className="flex-1 fluent-btn fluent-btn-secondary text-xs"
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  刷新数据
+                </button>
+                <button
+                  onClick={onOpenBindingPanel}
+                  className="flex-1 fluent-btn fluent-btn-primary text-xs"
+                >
+                  <Link2 className="w-3 h-3 mr-1" />
+                  详细配置
+                </button>
+              </div>
+              
+              {/* 快速字段映射 */}
+              {(type === 'chart-bar' || type === 'chart-line') && (
+                <div className="space-y-2 pt-2 border-t border-[var(--fluent-neutral-12)]">
+                  <label className="text-xs text-[var(--fluent-neutral-60)]">快速字段映射</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="text"
+                        value={(props.categoryField as string) || 'category'}
+                        onChange={(e) => onUpdateProps(component.id, { 
+                          categoryField: e.target.value,
+                          xAxis: e.target.value 
+                        })}
+                        placeholder="X轴字段"
+                        className="fluent-input w-full text-xs"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={(props.valueField as string) || 'value'}
+                        onChange={(e) => onUpdateProps(component.id, { 
+                          valueField: e.target.value,
+                          yAxis: e.target.value 
+                        })}
+                        placeholder="Y轴字段"
+                        className="fluent-input w-full text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -241,8 +336,8 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
           </div>
         )}
 
-        {/* 图表数据字段映射 */}
-        {(type === 'chart-bar' || type === 'chart-line') && (
+        {/* 图表数据字段映射（当没有数据源时显示） */}
+        {!component.dataSourceId && (type === 'chart-bar' || type === 'chart-line') && (
           <>
             <div>
               <label className="text-xs text-[var(--fluent-neutral-60)]">分类字段 (X轴)</label>
@@ -267,7 +362,7 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
           </>
         )}
 
-        {type === 'chart-pie' && (
+        {type === 'chart-pie' && !component.dataSourceId && (
           <>
             <div>
               <label className="text-xs text-[var(--fluent-neutral-60)]">名称字段</label>
@@ -408,7 +503,7 @@ function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateSt
           <label className="text-xs text-[var(--fluent-neutral-60)]">阴影</label>
           <select
             value={style.shadow || 'none'}
-            onChange={(e) => onUpdateStyle(component.id, { shadow: e.target.value as ComponentStyle['shadow'] })}
+            onChange={(e) => onUpdateStyle(component.id, { shadow: e.target.value as typeof style.shadow })}
             className="fluent-select w-full mt-1"
           >
             <option value="none">无</option>
