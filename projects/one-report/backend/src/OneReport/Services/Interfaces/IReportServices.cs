@@ -95,6 +95,7 @@ public interface IDataSourceService
     Task<DataSourceDto?> UpdateAsync(Guid id, UpdateDataSourceDto dto, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> TestConnectionAsync(TestConnectionRequest request, CancellationToken cancellationToken = default);
+    Task<bool> TestConnectionByIdAsync(Guid id, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

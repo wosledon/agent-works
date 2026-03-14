@@ -248,3 +248,88 @@ public class DataSourceListDto
     public long TotalCount { get; set; }
     public int TotalPages { get; set; }
 }
+
+// ========================================
+// 图表 DTOs
+// ========================================
+
+/// <summary>
+/// 图表定义DTO
+/// </summary>
+public class ChartDefinitionDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string ChartType { get; set; } = string.Empty;
+    public Guid DataSourceId { get; set; }
+    public string? DataSourceName { get; set; }
+    public string Query { get; set; } = string.Empty;
+    public ChartConfig? Config { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// 图表配置
+/// </summary>
+public class ChartConfig
+{
+    public string? XAxisField { get; set; }
+    public List<string>? YAxisFields { get; set; }
+    public string? CategoryField { get; set; }
+    public string? ValueField { get; set; }
+    public List<SeriesConfig>? Series { get; set; }
+    public Dictionary<string, object>? Options { get; set; }
+}
+
+/// <summary>
+/// 系列配置
+/// </summary>
+public class SeriesConfig
+{
+    public string Name { get; set; } = string.Empty;
+    public string Field { get; set; } = string.Empty;
+    public string? Type { get; set; }
+    public string? Color { get; set; }
+}
+
+/// <summary>
+/// 创建图表请求
+/// </summary>
+public class CreateChartDefinitionDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string ChartType { get; set; } = string.Empty;
+    public Guid DataSourceId { get; set; }
+    public string Query { get; set; } = string.Empty;
+    public ChartConfig? Config { get; set; }
+}
+
+/// <summary>
+/// 更新图表请求
+/// </summary>
+public class UpdateChartDefinitionDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string ChartType { get; set; } = string.Empty;
+    public Guid DataSourceId { get; set; }
+    public string Query { get; set; } = string.Empty;
+    public ChartConfig? Config { get; set; }
+    public bool IsActive { get; set; }
+}
+
+/// <summary>
+/// 分页图表列表DTO
+/// </summary>
+public class ChartDefinitionListDto
+{
+    public List<ChartDefinitionDto> Items { get; set; } = new();
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public long TotalCount { get; set; }
+    public int TotalPages { get; set; }
+}

@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<QueryResultCache> QueryResultCaches { get; set; }
     public DbSet<UserPermission> UserPermissions { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
+    public DbSet<ChartDefinition> ChartDefinitions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new QueryResultCacheConfiguration());
         modelBuilder.ApplyConfiguration(new UserPermissionConfiguration());
         modelBuilder.ApplyConfiguration(new UserRoleConfiguration());
+        modelBuilder.ApplyConfiguration(new ChartDefinitionConfiguration());
     }
 }
 

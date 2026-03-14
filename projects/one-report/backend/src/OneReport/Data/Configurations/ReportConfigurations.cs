@@ -234,3 +234,44 @@ public class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
             .IsUnique();
     }
 }
+
+public class ChartDefinitionConfiguration : IEntityTypeConfiguration<ChartDefinition>
+{
+    public void Configure(EntityTypeBuilder<ChartDefinition> builder)
+    {
+        builder.ToTable("chart_definitions");
+        
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.Name)
+            .HasMaxLength(200)
+            .IsRequired();
+        
+        builder.Property(e => e.Description)
+            .HasMaxLength(1000);
+        
+        builder.Property(e => e.ChartType)
+            .HasMaxLength(50)
+            .IsRequired();
+        
+        builder.Property(e => e.Query)
+            .HasColumnType("text")
+            .IsRequired();
+        
+        builder.Property(e => e.Config)
+            .HasColumnType("jsonb");
+        
+        builder.Property(e => e.IsActive)
+            .HasDefaultValue(true);
+        
+        builder.HasOne(e => e.DataSource)
+            .WithMany()
+            .HasForeignKey(e => e.DataSourceId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        builder.HasIndex(e => e.Name);
+        builder.HasIndex(e => e.DataSourceId);
+        builder.HasIndex(e => e.IsActive);
+        builder.HasIndex(e => e.CreatedAt);
+    }
+}

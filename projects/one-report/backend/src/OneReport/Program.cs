@@ -133,6 +133,7 @@ builder.Services.AddScoped<IExportJobQueueService, ExportJobQueueService>();
 builder.Services.AddScoped<IReportExecutionLogService, ReportExecutionLogService>();
 builder.Services.AddScoped<IQueryResultCacheService, QueryResultCacheService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IChartService, ChartService>();
 
 // HTTP 上下文访问器（用于获取客户端IP等）
 builder.Services.AddHttpContextAccessor();

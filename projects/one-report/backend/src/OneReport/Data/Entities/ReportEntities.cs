@@ -145,3 +145,24 @@ public class UserRole
     public string Role { get; set; } = string.Empty; // admin, editor, viewer
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+/// <summary>
+/// 图表定义
+/// </summary>
+public class ChartDefinition
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string ChartType { get; set; } = string.Empty; // line, bar, pie, scatter, etc.
+    public Guid DataSourceId { get; set; }
+    public string Query { get; set; } = string.Empty; // SQL 查询
+    public string? Config { get; set; } // JSON 配置：xAxis, yAxis, series 等映射
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    public Guid CreatedBy { get; set; }
+    
+    // 导航属性
+    public DataSource DataSource { get; set; } = null!;
+}

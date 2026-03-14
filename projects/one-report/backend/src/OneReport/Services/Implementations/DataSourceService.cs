@@ -159,6 +159,22 @@ public class DataSourceService : IDataSourceService
         return true;
     }
 
+    public async Task<bool> TestConnectionByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var dataSource = await _context.DataSources
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
+
+        if (dataSource == null)
+            throw new InvalidOperationException($"数据源 {id} 不存在");
+
+        return await TestConnectionAsync(new TestConnectionRequest
+        {
+            Type = dataSource.Type,
+            ConnectionString = dataSource.ConnectionString
+        }, cancellationToken);
+    }
+
     public async Task<bool> TestConnectionAsync(TestConnectionRequest request, CancellationToken cancellationToken = default)
     {
         try

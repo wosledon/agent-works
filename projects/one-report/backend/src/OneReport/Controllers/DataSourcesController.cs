@@ -127,7 +127,7 @@ public class DataSourcesController : ControllerBase
     }
 
     /// <summary>
-    /// 测试数据源连接
+    /// 测试数据源连接（新配置，无需保存）
     /// </summary>
     [HttpPost("test-connection")]
     public async Task<ActionResult<ApiResponse<bool>>> TestConnection(
@@ -149,6 +149,37 @@ public class DataSourcesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "测试数据源连接失败");
+            return BadRequest(ApiResponse<bool>.Fail("测试连接失败", new List<string> { ex.Message }));
+        }
+    }
+
+    /// <summary>
+    /// 测试已有数据源连接
+    /// </summary>
+    [HttpPost("{id:guid}/test")]
+    public async Task<ActionResult<ApiResponse<bool>>> TestConnectionById(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _dataSourceService.TestConnectionByIdAsync(id, cancellationToken);
+            if (result)
+                return Ok(ApiResponse<bool>.Ok(true, "连接成功"));
+            else
+                return Ok(ApiResponse<bool>.Ok(false, "连接失败，请检查数据源配置"));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(ApiResponse<bool>.Fail(ex.Message));
+        }
+        catch (NotSupportedException ex)
+        {
+            return BadRequest(ApiResponse<bool>.Fail(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "测试数据源连接失败: {Id}", id);
             return BadRequest(ApiResponse<bool>.Fail("测试连接失败", new List<string> { ex.Message }));
         }
     }

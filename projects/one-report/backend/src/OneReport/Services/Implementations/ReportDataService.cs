@@ -309,17 +309,50 @@ public class ReportDataService : IReportDataService
     {
         var stopwatch = Stopwatch.StartNew();
         
+        // 构建分页查询
+        var paginatedQuery = $@"
+            SELECT * FROM (
+                {request.Query}
+            ) AS query_data
+            LIMIT @PageSize OFFSET @Offset;
+        ";
+
+        // 获取总数
+        var countQuery = $"SELECT COUNT(*) FROM ({request.Query}) AS count_query";
+        
         var data = new List<Dictionary<string, object?>>();
         var columns = new List<ColumnMeta>();
+        long totalCount = 0;
 
         if (dataSource.Type == "mysql")
         {
             await using var connection = new MySqlConnection(dataSource.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             
-            await using var command = new MySqlCommand(request.Query, connection);
-            command.CommandTimeout = 120;
-            AddMySqlParameters(command, request.Parameters);
+            // 先获取总数
+            await using (var countCommand = new MySqlCommand(countQuery, connection))
+            {
+                countCommand.CommandTimeout = request.TimeoutSeconds;
+                AddMySqlParameters(countCommand, request.Parameters);
+                var countResult = await countCommand.ExecuteScalarAsync(cancellationToken);
+                totalCount = countResult switch
+                {
+                    long l => l,
+                    int i => i,
+                    _ => Convert.ToInt64(countResult)
+                };
+            }
+            
+            // 执行分页查询
+            await using var command = new MySqlCommand(paginatedQuery, connection);
+            command.CommandTimeout = request.TimeoutSeconds;
+            
+            var queryParams = new Dictionary<string, object?>(request.Parameters ?? new Dictionary<string, object?>())
+            {
+                ["PageSize"] = request.PageSize,
+                ["Offset"] = (request.PageNumber - 1) * request.PageSize
+            };
+            AddMySqlParameters(command, queryParams);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             
@@ -334,34 +367,37 @@ public class ReportDataService : IReportDataService
                 });
             }
 
-            long count = 0;
             while (await reader.ReadAsync(cancellationToken))
             {
-                count++;
-                if (count <= 1000)
-                {
-                    data.Add(ReadDataReaderRow(reader));
-                }
+                data.Add(ReadDataReaderRow(reader));
             }
 
             stopwatch.Stop();
-
-            return new QueryResultResponse
-            {
-                Data = data,
-                Columns = columns,
-                TotalCount = count,
-                QueryExecutionTime = $"{stopwatch.ElapsedMilliseconds}ms"
-            };
         }
         else
         {
             await using var connection = new NpgsqlConnection(dataSource.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             
-            await using var command = new NpgsqlCommand(request.Query, connection);
-            command.CommandTimeout = 120;
-            AddNpgsqlParameters(command, request.Parameters);
+            // 先获取总数
+            await using (var countCommand = new NpgsqlCommand(countQuery, connection))
+            {
+                countCommand.CommandTimeout = request.TimeoutSeconds;
+                AddNpgsqlParameters(countCommand, request.Parameters);
+                var countResult = await countCommand.ExecuteScalarAsync(cancellationToken);
+                totalCount = countResult is long count ? count : 0;
+            }
+            
+            // 执行分页查询
+            await using var command = new NpgsqlCommand(paginatedQuery, connection);
+            command.CommandTimeout = request.TimeoutSeconds;
+            
+            var queryParams = new Dictionary<string, object?>(request.Parameters ?? new Dictionary<string, object?>())
+            {
+                ["PageSize"] = request.PageSize,
+                ["Offset"] = (request.PageNumber - 1) * request.PageSize
+            };
+            AddNpgsqlParameters(command, queryParams);
 
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             
@@ -375,26 +411,23 @@ public class ReportDataService : IReportDataService
                 });
             }
 
-            long count = 0;
             while (await reader.ReadAsync(cancellationToken))
             {
-                count++;
-                if (count <= 1000)
-                {
-                    data.Add(ReadDataReaderRow(reader));
-                }
+                data.Add(ReadDataReaderRow(reader));
             }
 
             stopwatch.Stop();
-
-            return new QueryResultResponse
-            {
-                Data = data,
-                Columns = columns,
-                TotalCount = count,
-                QueryExecutionTime = $"{stopwatch.ElapsedMilliseconds}ms"
-            };
         }
+
+        return new QueryResultResponse
+        {
+            Data = data,
+            Columns = columns,
+            TotalCount = totalCount,
+            PageNumber = request.PageNumber,
+            PageSize = request.PageSize,
+            QueryExecutionTime = $"{stopwatch.ElapsedMilliseconds}ms"
+        };
     }
 
     private async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(

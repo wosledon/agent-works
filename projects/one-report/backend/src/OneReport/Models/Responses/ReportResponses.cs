@@ -93,5 +93,31 @@ public class QueryResultResponse
     public List<Dictionary<string, object?>> Data { get; set; } = new();
     public List<ColumnMeta> Columns { get; set; } = new();
     public long TotalCount { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
     public string? QueryExecutionTime { get; set; }
+}
+
+/// <summary>
+/// 图表数据响应
+/// </summary>
+public class ChartDataResponse
+{
+    public List<SeriesData> Series { get; set; } = new();
+    public List<string>? Categories { get; set; }
+    public List<Dictionary<string, object?>>? RawData { get; set; }
+    public string? ChartType { get; set; }
+    public long TotalCount { get; set; }
+    public string? QueryExecutionTime { get; set; }
+}
+
+/// <summary>
+/// 系列数据
+/// </summary>
+public class SeriesData
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Type { get; set; }
+    public List<object?> Data { get; set; } = new();
+    public string? Color { get; set; }
 }
