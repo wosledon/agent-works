@@ -37,10 +37,46 @@ public class DataSourceService : IDataSourceService
         return entity == null ? null : MapToDto(entity);
     }
 
+    public async Task<DataSourceListDto> GetListAsync(int pageNumber, int pageSize, string? search = null, CancellationToken cancellationToken = default)
+    {
+        var query = _context.DataSources
+            .AsNoTracking()
+            .AsQueryable();
+
+        // 搜索筛选
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(d => 
+                d.Name.ToLower().Contains(searchLower) ||
+                d.Type.ToLower().Contains(searchLower));
+        }
+
+        // 排序
+        query = query.OrderBy(d => d.Name);
+
+        // 分页
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return new DataSourceListDto
+        {
+            Items = items.Select(MapToDto).ToList(),
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+        };
+    }
+
     public async Task<List<DataSourceDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var entities = await _context.DataSources
             .AsNoTracking()
+            .Where(d => d.IsActive)
             .OrderBy(d => d.Name)
             .ToListAsync(cancellationToken);
 

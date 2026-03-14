@@ -25,9 +25,23 @@ public class DataSourcesController : ControllerBase
     }
 
     /// <summary>
-    /// 获取所有数据源
+    /// 获取数据源列表（分页）
     /// </summary>
     [HttpGet]
+    public async Task<ActionResult<ApiResponse<DataSourceListDto>>> GetList(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _dataSourceService.GetListAsync(pageNumber, pageSize, search, cancellationToken);
+        return Ok(ApiResponse<DataSourceListDto>.Ok(result));
+    }
+
+    /// <summary>
+    /// 获取所有活跃数据源（下拉选择用）
+    /// </summary>
+    [HttpGet("all")]
     public async Task<ActionResult<ApiResponse<List<DataSourceDto>>>> GetAll(CancellationToken cancellationToken)
     {
         var result = await _dataSourceService.GetAllAsync(cancellationToken);

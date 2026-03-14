@@ -15,24 +15,31 @@ namespace OneReport.Services.Implementations;
 /// <summary>
 /// 报表数据服务实现 - 支持流式查询以优化大报表内存使用
 /// 支持 PostgreSQL、MySQL、API 数据源
+/// 集成查询结果缓存和执行日志
 /// </summary>
 public class ReportDataService : IReportDataService
 {
     private readonly AppDbContext _context;
     private readonly IApiDataSourceService _apiDataSourceService;
     private readonly IConfiguration _configuration;
+    private readonly IQueryResultCacheService? _cacheService;
+    private readonly IReportExecutionLogService? _logService;
     private readonly ILogger<ReportDataService> _logger;
 
     public ReportDataService(
         AppDbContext context, 
         IApiDataSourceService apiDataSourceService,
         IConfiguration configuration,
-        ILogger<ReportDataService> logger)
+        ILogger<ReportDataService> logger,
+        IQueryResultCacheService? cacheService = null,
+        IReportExecutionLogService? logService = null)
     {
         _context = context;
         _apiDataSourceService = apiDataSourceService;
         _configuration = configuration;
         _logger = logger;
+        _cacheService = cacheService;
+        _logService = logService;
     }
 
     public async Task<ReportPreviewResponse> PreviewAsync(
@@ -42,52 +49,103 @@ public class ReportDataService : IReportDataService
         int pageSize, 
         CancellationToken cancellationToken = default)
     {
-        var report = await _context.ReportDefinitions
-            .AsNoTracking()
-            .Include(r => r.Columns)
-            .FirstOrDefaultAsync(r => r.Id == reportDefinitionId && r.IsActive, cancellationToken);
+        // 开始执行日志记录
+        Guid? logId = null;
+        if (_logService != null)
+        {
+            logId = await _logService.BeginExecutionAsync(reportDefinitionId, "preview", parameters, cancellationToken: cancellationToken);
+        }
 
-        if (report == null)
-            throw new InvalidOperationException($"报表定义 {reportDefinitionId} 不存在");
-
-        var stopwatch = Stopwatch.StartNew();
-        
-        var columns = report.Columns
-            .Where(c => c.IsVisible)
-            .OrderBy(c => c.DisplayOrder)
-            .Select(c => new ColumnMeta
+        try
+        {
+            // 尝试从缓存获取（仅第一页）
+            if (_cacheService != null && pageNumber == 1)
             {
-                FieldName = c.FieldName,
-                DisplayName = c.DisplayName,
-                DataType = c.DataType
-            }).ToList();
+                var cachedResult = await _cacheService.GetCachedResultAsync(reportDefinitionId, parameters, cancellationToken);
+                if (cachedResult != null)
+                {
+                    _logger.LogInformation("报表预览使用缓存: {ReportId}", reportDefinitionId);
+                    
+                    // 更新日志为完成状态
+                    if (logId.HasValue)
+                    {
+                        await _logService!.CompleteExecutionAsync(logId.Value, cachedResult.TotalCount, usedCache: true, cancellationToken: cancellationToken);
+                    }
+                    
+                    return cachedResult;
+                }
+            }
 
-        List<Dictionary<string, object?>> data;
-        
-        // 根据数据源类型选择查询方式
-        if (IsApiDataSource(report))
-        {
-            data = await QueryApiPreviewAsync(report, parameters, pageNumber, pageSize, cancellationToken);
+            var report = await _context.ReportDefinitions
+                .AsNoTracking()
+                .Include(r => r.Columns)
+                .FirstOrDefaultAsync(r => r.Id == reportDefinitionId && r.IsActive, cancellationToken);
+
+            if (report == null)
+                throw new InvalidOperationException($"报表定义 {reportDefinitionId} 不存在");
+
+            var stopwatch = Stopwatch.StartNew();
+            
+            var columns = report.Columns
+                .Where(c => c.IsVisible)
+                .OrderBy(c => c.DisplayOrder)
+                .Select(c => new ColumnMeta
+                {
+                    FieldName = c.FieldName,
+                    DisplayName = c.DisplayName,
+                    DataType = c.DataType
+                }).ToList();
+
+            List<Dictionary<string, object?>> data;
+            
+            // 根据数据源类型选择查询方式
+            if (IsApiDataSource(report))
+            {
+                data = await QueryApiPreviewAsync(report, parameters, pageNumber, pageSize, cancellationToken);
+            }
+            else
+            {
+                data = await QueryDatabasePreviewAsync(report, parameters, pageNumber, pageSize, cancellationToken);
+            }
+
+            var totalCount = await GetTotalCountAsync(reportDefinitionId, parameters, cancellationToken);
+            stopwatch.Stop();
+
+            var result = new ReportPreviewResponse
+            {
+                Data = data,
+                Columns = columns,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            // 缓存第一页结果
+            if (_cacheService != null && pageNumber == 1 && data.Count > 0)
+            {
+                await _cacheService.CacheResultAsync(reportDefinitionId, parameters, result, cancellationToken: cancellationToken);
+            }
+
+            // 完成执行日志记录
+            if (logId.HasValue)
+            {
+                await _logService!.CompleteExecutionAsync(logId.Value, totalCount, usedCache: false, cancellationToken: cancellationToken);
+            }
+
+            _logger.LogInformation("报表预览查询完成: {ReportId}, 记录数: {Count}, 耗时: {ElapsedMs}ms", 
+                reportDefinitionId, data.Count, stopwatch.ElapsedMilliseconds);
+
+            return result;
         }
-        else
+        catch (Exception ex)
         {
-            data = await QueryDatabasePreviewAsync(report, parameters, pageNumber, pageSize, cancellationToken);
+            // 记录执行失败
+            if (logId.HasValue)
+            {
+                await _logService!.FailExecutionAsync(logId.Value, ex.Message, cancellationToken: cancellationToken);
+            }
+            throw;
         }
-
-        var totalCount = await GetTotalCountAsync(reportDefinitionId, parameters, cancellationToken);
-        stopwatch.Stop();
-
-        _logger.LogInformation("报表预览查询完成: {ReportId}, 记录数: {Count}, 耗时: {ElapsedMs}ms", 
-            reportDefinitionId, data.Count, stopwatch.ElapsedMilliseconds);
-
-        return new ReportPreviewResponse
-        {
-            Data = data,
-            Columns = columns,
-            TotalCount = totalCount,
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
     }
 
     /// <summary>

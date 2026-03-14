@@ -9,8 +9,14 @@ import {
   Plus,
   FileText,
   Globe,
-  Database as DatabaseIcon
+  Database as DatabaseIcon,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  Eye,
+  RefreshCw
 } from 'lucide-react';
+import { DataSourceModal } from './DataSourceModal';
 import type { DataSource, ReportComponent } from '~/types';
 
 export function PropertyPanel() {
@@ -29,13 +35,12 @@ export function PropertyPanel() {
     removeDataSource,
     setShowDataSourceModal,
     setEditingDataSource,
+    testDataSource,
     updateConfig,
+    refreshComponentData,
   } = useReportStore();
 
   const { components, dataSources } = config;
-  const snapToGridValue = useReportStore((state: { snapToGrid: boolean }) => state.snapToGrid);
-  // 使用 void 表达式来避免未使用变量的警告
-  void snapToGridValue;
   
   const selectedComponent = components.find((c: ReportComponent) => c.id === selectedComponentId);
 
@@ -51,8 +56,8 @@ export function PropertyPanel() {
 
   return (
     <>
-      <aside className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <aside className="w-72 bg-[var(--fluent-neutral-0)] border-l border-[var(--fluent-neutral-12)] flex flex-col">
+        <div className="flex border-b border-[var(--fluent-neutral-12)]">
           {[
             { id: 'properties', label: '属性', icon: Type },
             { id: 'data', label: '数据', icon: Database },
@@ -61,10 +66,10 @@ export function PropertyPanel() {
             <button
               key={id}
               onClick={() => setActiveTab(id as typeof activeTab)}
-              className={`flex-1 px-3 py-3 text-sm font-medium flex items-center justify-center gap-1 transition-colors ${
+              className={`flex-1 px-3 py-3 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
                 activeTab === id
-                  ? 'text-blue-500 border-b-2 border-blue-500'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-[var(--fluent-primary)] border-b-2 border-[var(--fluent-primary)]'
+                  : 'text-[var(--fluent-neutral-50)] hover:text-[var(--fluent-neutral-90)] hover:bg-[var(--fluent-neutral-4)]'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -77,16 +82,18 @@ export function PropertyPanel() {
           {activeTab === 'properties' && selectedComponent && (
             <ComponentProperties 
               component={selectedComponent}
+              dataSources={dataSources}
               onUpdateProps={updateComponentProps}
               onUpdateStyle={updateComponentStyle}
               onRemove={removeComponent}
+              onRefreshData={refreshComponentData}
             />
           )}
           
           {activeTab === 'properties' && !selectedComponent && (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+            <div className="text-center text-[var(--fluent-neutral-40)] py-12">
               <Layout className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>选择一个组件以编辑属性</p>
+              <p className="text-sm">选择一个组件以编辑属性</p>
             </div>
           )}
           
@@ -120,6 +127,7 @@ export function PropertyPanel() {
             setShowDataSourceModal(false);
           }}
           onClose={() => setShowDataSourceModal(false)}
+          onTest={testDataSource}
         />
       )}
     </>
@@ -128,166 +136,286 @@ export function PropertyPanel() {
 
 interface ComponentPropertiesProps {
   component: ReportComponent;
+  dataSources: DataSource[];
   onUpdateProps: (id: string, props: Record<string, unknown>) => void;
   onUpdateStyle: (id: string, style: Record<string, unknown>) => void;
   onRemove: (id: string) => void;
+  onRefreshData: (id: string) => Promise<void>;
 }
 
-function ComponentProperties({ component, onUpdateProps, onUpdateStyle, onRemove }: ComponentPropertiesProps) {
-  const { props, style } = component;
+function ComponentProperties({ component, dataSources, onUpdateProps, onUpdateStyle, onRemove, onRefreshData }: ComponentPropertiesProps) {
+  const { props, style, type } = component;
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshData = async () => {
+    if (!component.dataSourceId) return;
+    setIsRefreshing(true);
+    await onRefreshData(component.id);
+    setIsRefreshing(false);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">{component.name}</h3>
+        <h3 className="text-sm font-medium text-[var(--fluent-neutral-90)]">{component.name}</h3>
         <button
           onClick={() => onRemove(component.id)}
-          className="text-red-500 hover:text-red-600 p-1"
+          className="p-1.5 text-[var(--fluent-error)] hover:bg-[var(--fluent-error-bg)] rounded transition-colors"
+          title="删除组件"
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
 
+      {/* 数据源绑定 */}
+      {(type === 'table' || type === 'chart-bar' || type === 'chart-line' || type === 'chart-pie') && (
+        <div className="space-y-3 p-3 bg-[var(--fluent-neutral-4)] rounded-lg">
+          <h4 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase flex items-center gap-1">
+            <Database className="w-3 h-3" />
+            数据源绑定
+          </h4>
+          
+          <select
+            value={component.dataSourceId || ''}
+            onChange={(e) => onUpdateProps(component.id, { dataSourceId: e.target.value || undefined })}
+            className="fluent-select w-full"
+          >
+            <option value="">-- 选择数据源 --</option>
+            {dataSources.map((ds) => (
+              <option key={ds.id} value={ds.id}>
+                {ds.name}
+              </option>
+            ))}
+          </select>
+          
+          {component.dataSourceId && (
+            <button
+              onClick={handleRefreshData}
+              disabled={isRefreshing}
+              className="fluent-btn fluent-btn-secondary w-full text-xs"
+            >
+              <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'fluent-spin' : ''}`} />
+              刷新数据
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 内容属性 */}
       <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">内容</h4>
+        <h4 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase">内容</h4>
         
         {'title' in props && (
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">标题</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">标题</label>
             <input
               type="text"
               value={(props.title as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { title: e.target.value })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
         )}
         
         {'text' in props && (
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">文本内容</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">文本内容</label>
             <textarea
               value={(props.text as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { text: e.target.value })}
               rows={3}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 resize-none"
+              className="fluent-textarea w-full mt-1"
             />
           </div>
         )}
         
         {'placeholder' in props && (
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">占位符</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">占位符</label>
             <input
               type="text"
               value={(props.placeholder as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { placeholder: e.target.value })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
+        )}
+
+        {/* 图表数据字段映射 */}
+        {(type === 'chart-bar' || type === 'chart-line') && (
+          <>
+            <div>
+              <label className="text-xs text-[var(--fluent-neutral-60)]">分类字段 (X轴)</label>
+              <input
+                type="text"
+                value={(props.categoryField as string) || 'category'}
+                onChange={(e) => onUpdateProps(component.id, { categoryField: e.target.value, xAxis: e.target.value })}
+                placeholder="例如：name, category"
+                className="fluent-input w-full mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--fluent-neutral-60)]">数值字段 (Y轴)</label>
+              <input
+                type="text"
+                value={(props.valueField as string) || 'value'}
+                onChange={(e) => onUpdateProps(component.id, { valueField: e.target.value, yAxis: e.target.value })}
+                placeholder="例如：value, count"
+                className="fluent-input w-full mt-1"
+              />
+            </div>
+          </>
+        )}
+
+        {type === 'chart-pie' && (
+          <>
+            <div>
+              <label className="text-xs text-[var(--fluent-neutral-60)]">名称字段</label>
+              <input
+                type="text"
+                value={(props.nameField as string) || 'name'}
+                onChange={(e) => onUpdateProps(component.id, { nameField: e.target.value })}
+                placeholder="例如：name"
+                className="fluent-input w-full mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--fluent-neutral-60)]">数值字段</label>
+              <input
+                type="text"
+                value={(props.valueField as string) || 'value'}
+                onChange={(e) => onUpdateProps(component.id, { valueField: e.target.value })}
+                placeholder="例如：value"
+                className="fluent-input w-full mt-1"
+              />
+            </div>
+          </>
         )}
       </div>
 
       {/* 样式属性 */}
       <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">样式</h4>
+        <h4 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase">样式</h4>
         
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">X 坐标</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">X 坐标</label>
             <input
               type="number"
               value={style.x}
               onChange={(e) => onUpdateStyle(component.id, { x: Number(e.target.value) })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">Y 坐标</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">Y 坐标</label>
             <input
               type="number"
               value={style.y}
               onChange={(e) => onUpdateStyle(component.id, { y: Number(e.target.value) })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">宽度</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">宽度</label>
             <input
               type="number"
               value={style.width}
               onChange={(e) => onUpdateStyle(component.id, { width: Number(e.target.value) })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">高度</label>
+            <label className="text-xs text-[var(--fluent-neutral-60)]">高度</label>
             <input
               type="number"
               value={style.height}
               onChange={(e) => onUpdateStyle(component.id, { height: Number(e.target.value) })}
-              className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input w-full mt-1"
             />
           </div>
         </div>
         
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">背景颜色</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">背景颜色</label>
           <div className="flex gap-2 mt-1">
             <input
               type="color"
               value={style.backgroundColor || '#ffffff'}
               onChange={(e) => onUpdateStyle(component.id, { backgroundColor: e.target.value })}
-              className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+              className="w-8 h-8 rounded border border-[var(--fluent-neutral-20)] cursor-pointer"
             />
             <input
               type="text"
               value={style.backgroundColor || ''}
               onChange={(e) => onUpdateStyle(component.id, { backgroundColor: e.target.value })}
               placeholder="transparent"
-              className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input flex-1"
             />
           </div>
         </div>
         
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">文字颜色</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">文字颜色</label>
           <div className="flex gap-2 mt-1">
             <input
               type="color"
-              value={style.color || '#374151'}
+              value={style.color || '#323130'}
               onChange={(e) => onUpdateStyle(component.id, { color: e.target.value })}
-              className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+              className="w-8 h-8 rounded border border-[var(--fluent-neutral-20)] cursor-pointer"
             />
             <input
               type="text"
               value={style.color || ''}
               onChange={(e) => onUpdateStyle(component.id, { color: e.target.value })}
               placeholder="inherit"
-              className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+              className="fluent-input flex-1"
             />
           </div>
         </div>
         
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">字体大小 (px)</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">字体大小 (px)</label>
           <input
-            type="number"
+            type="range"
+            min={10}
+            max={32}
             value={style.fontSize || 14}
             onChange={(e) => onUpdateStyle(component.id, { fontSize: Number(e.target.value) })}
-            className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+            className="w-full mt-1"
           />
+          <div className="text-xs text-[var(--fluent-neutral-40)] text-center mt-1">
+            {style.fontSize || 14}px
+          </div>
         </div>
         
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">圆角 (px)</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">圆角 (px)</label>
           <input
-            type="number"
+            type="range"
+            min={0}
+            max={24}
             value={style.borderRadius || 0}
             onChange={(e) => onUpdateStyle(component.id, { borderRadius: Number(e.target.value) })}
-            className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+            className="w-full mt-1"
           />
+          <div className="text-xs text-[var(--fluent-neutral-40)] text-center mt-1">
+            {style.borderRadius || 0}px
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">阴影</label>
+          <select
+            value={style.shadow || 'none'}
+            onChange={(e) => onUpdateStyle(component.id, { shadow: e.target.value as ComponentStyle['shadow'] })}
+            className="fluent-select w-full mt-1"
+          >
+            <option value="none">无</option>
+            <option value="small">小</option>
+            <option value="medium">中</option>
+            <option value="large">大</option>
+          </select>
         </div>
       </div>
     </div>
@@ -310,22 +438,33 @@ function DataSourcePanel({ dataSources, onAdd, onEdit, onRemove }: DataSourcePan
     database: DatabaseIcon,
   };
 
+  const getStatusIcon = (status?: DataSource['testStatus']) => {
+    switch (status) {
+      case 'success':
+        return <CheckCircle className="w-3.5 h-3.5 text-[var(--fluent-success)]" />;
+      case 'error':
+        return <XCircle className="w-3.5 h-3.5 text-[var(--fluent-error)]" />;
+      default:
+        return <HelpCircle className="w-3.5 h-3.5 text-[var(--fluent-neutral-40)]" />;
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">数据源</h3>
+        <h3 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase">数据源管理</h3>
         <button
           onClick={onAdd}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="fluent-btn fluent-btn-primary text-xs"
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3.5 h-3.5" />
           添加
         </button>
       </div>
       
       {dataSources.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
+        <div className="text-center py-10 text-[var(--fluent-neutral-40)]">
+          <Database className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm">暂无数据源</p>
           <p className="text-xs mt-1">点击上方按钮添加</p>
         </div>
@@ -336,29 +475,40 @@ function DataSourcePanel({ dataSources, onAdd, onEdit, onRemove }: DataSourcePan
             return (
               <div
                 key={ds.id}
-                className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 group"
+                className="group p-3 bg-[var(--fluent-neutral-4)] hover:bg-[var(--fluent-neutral-8)] rounded-lg border border-transparent hover:border-[var(--fluent-neutral-12)] transition-all"
               >
                 <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-gray-500" />
-                  <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {ds.name}
-                  </span>
+                  <div className="p-1.5 bg-[var(--fluent-neutral-0)] rounded">
+                    <Icon className="w-4 h-4 text-[var(--fluent-primary)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium text-[var(--fluent-neutral-90)] truncate">
+                        {ds.name}
+                      </span>
+                      {getStatusIcon(ds.testStatus)}
+                    </div>
+                    <div className="text-xs text-[var(--fluent-neutral-40)] capitalize">
+                      {ds.type} {ds.lastTested && `· ${new Date(ds.lastTested).toLocaleDateString()}`}
+                    </div>
+                  </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => onEdit(ds)}
-                      className="p-1 text-gray-500 hover:text-blue-500"
+                      className="p-1.5 text-[var(--fluent-neutral-50)] hover:text-[var(--fluent-primary)] hover:bg-[var(--fluent-primary-bg)] rounded transition-colors"
+                      title="编辑"
                     >
-                      <Edit3 className="w-3 h-3" />
+                      <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onRemove(ds.id)}
-                      className="p-1 text-gray-500 hover:text-red-500"
+                      className="p-1.5 text-[var(--fluent-neutral-50)] hover:text-[var(--fluent-error)] hover:bg-[var(--fluent-error-bg)] rounded transition-colors"
+                      title="删除"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500 mt-1 capitalize">{ds.type}</div>
               </div>
             );
           })}
@@ -375,233 +525,98 @@ interface CanvasSettingsProps {
 }
 
 function CanvasSettings({ config, onUpdate }: CanvasSettingsProps) {
+  const snapToGrid = useReportStore((state) => state.snapToGrid);
+  const toggleSnapToGrid = useReportStore((state) => state.toggleSnapToGrid);
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">画布设置</h3>
+    <div className="space-y-5">
+      <h3 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase">画布设置</h3>
       
       <div>
-        <label className="text-xs text-gray-600 dark:text-gray-300">报表名称</label>
+        <label className="text-xs text-[var(--fluent-neutral-60)]">报表名称</label>
         <input
           type="text"
           value={config.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
-          className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+          className="fluent-input w-full mt-1"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs text-[var(--fluent-neutral-60)]">描述</label>
+        <textarea
+          value={config.description || ''}
+          onChange={(e) => onUpdate({ description: e.target.value })}
+          rows={3}
+          className="fluent-textarea w-full mt-1"
+          placeholder="报表描述信息..."
         />
       </div>
       
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">宽度 (px)</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">宽度 (px)</label>
           <input
             type="number"
             value={config.width}
             onChange={(e) => onUpdate({ width: Number(e.target.value) })}
-            className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+            className="fluent-input w-full mt-1"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-600 dark:text-gray-300">高度 (px)</label>
+          <label className="text-xs text-[var(--fluent-neutral-60)]">高度 (px)</label>
           <input
             type="number"
             value={config.height}
             onChange={(e) => onUpdate({ height: Number(e.target.value) })}
-            className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+            className="fluent-input w-full mt-1"
           />
         </div>
       </div>
       
       <div>
-        <label className="text-xs text-gray-600 dark:text-gray-300">网格大小 (px)</label>
+        <label className="text-xs text-[var(--fluent-neutral-60)]">网格大小 (px)</label>
         <input
           type="number"
           value={config.gridSize}
           onChange={(e) => onUpdate({ gridSize: Number(e.target.value) })}
-          className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+          className="fluent-input w-full mt-1"
         />
       </div>
       
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="showGrid"
-          checked={config.showGrid}
-          onChange={(e) => onUpdate({ showGrid: e.target.checked })}
-          className="rounded border-gray-300"
-        />
-        <label htmlFor="showGrid" className="text-sm text-gray-600 dark:text-gray-300">
-          显示网格
+      <div className="space-y-2 pt-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={config.showGrid}
+            onChange={(e) => onUpdate({ showGrid: e.target.checked })}
+            className="fluent-checkbox"
+          />
+          <span className="text-sm text-[var(--fluent-neutral-60)]">显示网格</span>
         </label>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="snapToGrid"
-          checked={useReportStore.getState().snapToGrid}
-          onChange={() => useReportStore.getState().toggleSnapToGrid()}
-          className="rounded border-gray-300"
-        />
-        <label htmlFor="snapToGrid" className="text-sm text-gray-600 dark:text-gray-300">
-          吸附网格
-        </label>
-      </div>
-    </div>
-  );
-}
-
-// 数据源模态框
-interface DataSourceModalProps {
-  dataSource: DataSource | null;
-  onSave: (ds: Omit<DataSource, 'id'>) => void;
-  onClose: () => void;
-}
-
-function DataSourceModal({ dataSource, onSave, onClose }: DataSourceModalProps) {
-  const [formData, setFormData] = useState<Omit<DataSource, 'id'>>(
-    dataSource || {
-      name: '',
-      type: 'api',
-      config: {},
-    }
-  );
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.name) {
-      onSave(formData);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            {dataSource ? '编辑数据源' : '添加数据源'}
-          </h3>
-        </div>
         
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              名称
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              类型
-            </label>
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as DataSource['type'] })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-            >
-              <option value="api">API 接口</option>
-              <option value="database">数据库</option>
-              <option value="file">文件</option>
-              <option value="static">静态数据</option>
-            </select>
-          </div>
-          
-          {formData.type === 'api' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.config.url || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    config: { ...formData.config, url: e.target.value }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                  placeholder="https://api.example.com/data"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  请求方法
-                </label>
-                <select
-                  value={formData.config.method || 'GET'}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    config: { ...formData.config, method: e.target.value as 'GET' | 'POST' | 'PUT' | 'DELETE' }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                </select>
-              </div>
-            </>
-          )}
-          
-          {formData.type === 'database' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  连接字符串
-                </label>
-                <input
-                  type="text"
-                  value={formData.config.connectionString || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    config: { ...formData.config, connectionString: e.target.value }
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                  placeholder="host=localhost;port=5432;database=mydb"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  SQL 查询
-                </label>
-                <textarea
-                  value={formData.config.sql || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    config: { ...formData.config, sql: e.target.value }
-                  })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 resize-none font-mono text-sm"
-                  placeholder="SELECT * FROM table_name"
-                />
-              </div>
-            </>
-          )}
-          
-          <div className="flex justify-end gap-2 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              保存
-            </button>
-          </div>
-        </form>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={snapToGrid}
+            onChange={toggleSnapToGrid}
+            className="fluent-checkbox"
+          />
+          <span className="text-sm text-[var(--fluent-neutral-60)]">吸附网格</span>
+        </label>
+      </div>
+
+      <div className="pt-4 border-t border-[var(--fluent-neutral-12)]">
+        <h4 className="text-xs font-semibold text-[var(--fluent-neutral-50)] uppercase mb-3">主题</h4>
+        <select
+          value={config.theme}
+          onChange={(e) => onUpdate({ theme: e.target.value as typeof config.theme })}
+          className="fluent-select w-full"
+        >
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="auto">跟随系统</option>
+        </select>
       </div>
     </div>
   );

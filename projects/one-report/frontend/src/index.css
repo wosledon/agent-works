@@ -1,16 +1,70 @@
 @import "tailwindcss";
 
+/* Fluent Design 风格变量 */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --accent: #3b82f6;
-  --accent-bg: rgba(59, 130, 246, 0.1);
-  --accent-border: rgba(59, 130, 246, 0.5);
+  /* 主要颜色 */
+  --fluent-primary: #0078d4;
+  --fluent-primary-hover: #106ebe;
+  --fluent-primary-active: #005a9e;
+  --fluent-primary-bg: rgba(0, 120, 212, 0.1);
+  
+  /* 中性色 */
+  --fluent-neutral-0: #ffffff;
+  --fluent-neutral-4: #f5f5f5;
+  --fluent-neutral-8: #ebebeb;
+  --fluent-neutral-12: #e0e0e0;
+  --fluent-neutral-20: #c8c8c8;
+  --fluent-neutral-30: #a6a6a6;
+  --fluent-neutral-40: #8a8a8a;
+  --fluent-neutral-50: #6e6e6e;
+  --fluent-neutral-60: #525252;
+  --fluent-neutral-70: #424242;
+  --fluent-neutral-80: #323232;
+  --fluent-neutral-90: #212121;
+  --fluent-neutral-100: #000000;
+  
+  /* 语义色 */
+  --fluent-success: #107c10;
+  --fluent-success-bg: rgba(16, 124, 16, 0.1);
+  --fluent-warning: #ffc107;
+  --fluent-warning-bg: rgba(255, 193, 7, 0.1);
+  --fluent-error: #d13438;
+  --fluent-error-bg: rgba(209, 52, 56, 0.1);
+  --fluent-info: #0078d4;
+  
+  /* 阴影 */
+  --fluent-shadow-0: 0 0 0 rgba(0, 0, 0, 0);
+  --fluent-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --fluent-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --fluent-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.12);
+  --fluent-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.14);
+  --fluent-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.16);
+  
+  /* 圆角 */
+  --fluent-radius-2: 2px;
+  --fluent-radius-4: 4px;
+  --fluent-radius-6: 6px;
+  --fluent-radius-8: 8px;
+  --fluent-radius-12: 12px;
+  --fluent-radius-circle: 50%;
+  
+  /* 过渡 */
+  --fluent-duration-fast: 100ms;
+  --fluent-duration-normal: 200ms;
+  --fluent-duration-slow: 300ms;
+  --fluent-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
+  
+  /* 应用到全局 */
+  --text: var(--fluent-neutral-60);
+  --text-h: var(--fluent-neutral-90);
+  --bg: var(--fluent-neutral-0);
+  --border: var(--fluent-neutral-12);
+  --accent: var(--fluent-primary);
+  --accent-bg: var(--fluent-primary-bg);
+  --accent-border: rgba(0, 120, 212, 0.5);
 
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: 0.18px;
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  letter-spacing: 0.01em;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -22,21 +76,480 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --accent: #60a5fa;
-    --accent-bg: rgba(96, 165, 250, 0.15);
-    --accent-border: rgba(96, 165, 250, 0.5);
+    --fluent-primary: #2899f5;
+    --fluent-primary-hover: #3aa0f3;
+    --fluent-primary-active: #0078d4;
+    
+    --fluent-neutral-0: #1f1f1f;
+    --fluent-neutral-4: #2d2d2d;
+    --fluent-neutral-8: #3d3d3d;
+    --fluent-neutral-12: #4d4d4d;
+    --fluent-neutral-20: #5c5c5c;
+    --fluent-neutral-30: #707070;
+    --fluent-neutral-40: #8a8a8a;
+    --fluent-neutral-50: #a6a6a6;
+    --fluent-neutral-60: #c8c8c8;
+    --fluent-neutral-70: #e0e0e0;
+    --fluent-neutral-80: #ebebeb;
+    --fluent-neutral-90: #f5f5f5;
+    --fluent-neutral-100: #ffffff;
+    
+    --fluent-success: #54b054;
+    --fluent-warning: #ffc107;
+    --fluent-error: #e87d7d;
+    --fluent-info: #2899f5;
+    
+    --fluent-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --fluent-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.35);
+    --fluent-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --fluent-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.45);
+    --fluent-shadow-32: 0 16px 32px rgba(0, 0, 0, 0.5);
+    
+    --text: var(--fluent-neutral-60);
+    --text-h: var(--fluent-neutral-90);
+    --bg: var(--fluent-neutral-0);
+    --border: var(--fluent-neutral-12);
+    --accent: var(--fluent-primary);
+    --accent-bg: rgba(40, 153, 245, 0.15);
   }
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 #root {
   min-height: 100vh;
+}
+
+/* Fluent Design 按钮样式 */
+.fluent-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 400;
+  border-radius: var(--fluent-radius-4);
+  border: 1px solid transparent;
+  background: var(--fluent-neutral-4);
+  color: var(--fluent-neutral-90);
+  cursor: pointer;
+  transition: all var(--fluent-duration-fast) var(--fluent-easing);
+}
+
+.fluent-btn:hover {
+  background: var(--fluent-neutral-8);
+}
+
+.fluent-btn:active {
+  background: var(--fluent-neutral-12);
+}
+
+.fluent-btn-primary {
+  background: var(--fluent-primary);
+  color: white;
+  border-color: var(--fluent-primary);
+}
+
+.fluent-btn-primary:hover {
+  background: var(--fluent-primary-hover);
+  border-color: var(--fluent-primary-hover);
+}
+
+.fluent-btn-primary:active {
+  background: var(--fluent-primary-active);
+  border-color: var(--fluent-primary-active);
+}
+
+.fluent-btn-secondary {
+  background: transparent;
+  border-color: var(--fluent-neutral-20);
+  color: var(--fluent-neutral-90);
+}
+
+.fluent-btn-secondary:hover {
+  background: var(--fluent-neutral-4);
+}
+
+.fluent-btn-ghost {
+  background: transparent;
+  color: var(--fluent-neutral-90);
+}
+
+.fluent-btn-ghost:hover {
+  background: var(--fluent-neutral-4);
+}
+
+.fluent-btn-danger {
+  background: var(--fluent-error);
+  color: white;
+}
+
+.fluent-btn-danger:hover {
+  background: #b92d31;
+}
+
+/* Fluent Design 输入框 */
+.fluent-input {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--fluent-neutral-20);
+  border-radius: var(--fluent-radius-4);
+  background: var(--fluent-neutral-0);
+  color: var(--fluent-neutral-90);
+  outline: none;
+  transition: all var(--fluent-duration-fast) var(--fluent-easing);
+}
+
+.fluent-input:hover {
+  border-color: var(--fluent-neutral-30);
+}
+
+.fluent-input:focus {
+  border-color: var(--fluent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+.fluent-input::placeholder {
+  color: var(--fluent-neutral-40);
+}
+
+/* Fluent Design 卡片 */
+.fluent-card {
+  background: var(--fluent-neutral-0);
+  border: 1px solid var(--fluent-neutral-12);
+  border-radius: var(--fluent-radius-8);
+  box-shadow: var(--fluent-shadow-2);
+  transition: box-shadow var(--fluent-duration-normal) var(--fluent-easing);
+}
+
+.fluent-card:hover {
+  box-shadow: var(--fluent-shadow-4);
+}
+
+.fluent-card-shadow-small {
+  box-shadow: var(--fluent-shadow-2);
+}
+
+.fluent-card-shadow-medium {
+  box-shadow: var(--fluent-shadow-8);
+}
+
+.fluent-card-shadow-large {
+  box-shadow: var(--fluent-shadow-16);
+}
+
+/* Fluent Design 标签页 */
+.fluent-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--fluent-neutral-12);
+}
+
+.fluent-tab {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--fluent-neutral-60);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--fluent-duration-fast) var(--fluent-easing);
+}
+
+.fluent-tab:hover {
+  color: var(--fluent-neutral-90);
+  background: var(--fluent-neutral-4);
+}
+
+.fluent-tab-active {
+  color: var(--fluent-primary);
+  border-bottom-color: var(--fluent-primary);
+  font-weight: 500;
+}
+
+/* Fluent Design 列表项 */
+.fluent-list-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--fluent-radius-4);
+  cursor: pointer;
+  transition: background var(--fluent-duration-fast) var(--fluent-easing);
+}
+
+.fluent-list-item:hover {
+  background: var(--fluent-neutral-4);
+}
+
+.fluent-list-item-active {
+  background: var(--fluent-primary-bg);
+  color: var(--fluent-primary);
+}
+
+/* Fluent Design 模态框 */
+.fluent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 150ms ease-out;
+}
+
+.fluent-modal {
+  background: var(--fluent-neutral-0);
+  border-radius: var(--fluent-radius-8);
+  box-shadow: var(--fluent-shadow-32);
+  min-width: 400px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideUp 200ms ease-out;
+}
+
+.fluent-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--fluent-neutral-12);
+}
+
+.fluent-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.fluent-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--fluent-neutral-12);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Fluent Design 徽章 */
+.fluent-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--fluent-radius-12);
+}
+
+.fluent-badge-success {
+  background: var(--fluent-success-bg);
+  color: var(--fluent-success);
+}
+
+.fluent-badge-warning {
+  background: var(--fluent-warning-bg);
+  color: #d57f00;
+}
+
+.fluent-badge-error {
+  background: var(--fluent-error-bg);
+  color: var(--fluent-error);
+}
+
+.fluent-badge-info {
+  background: var(--fluent-primary-bg);
+  color: var(--fluent-primary);
+}
+
+/* 状态指示器 */
+.fluent-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.fluent-status-success {
+  background: var(--fluent-success);
+}
+
+.fluent-status-warning {
+  background: var(--fluent-warning);
+}
+
+.fluent-status-error {
+  background: var(--fluent-error);
+}
+
+.fluent-status-untested {
+  background: var(--fluent-neutral-40);
+}
+
+/* 工具提示 */
+.fluent-tooltip {
+  position: relative;
+}
+
+.fluent-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 4px 8px;
+  font-size: 12px;
+  color: white;
+  background: var(--fluent-neutral-80);
+  border-radius: var(--fluent-radius-4);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--fluent-duration-fast);
+  z-index: 100;
+}
+
+.fluent-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.fluent-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fluent-neutral-20);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fluent-neutral-30);
+}
+
+/* 表格样式 */
+.fluent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.fluent-table th,
+.fluent-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--fluent-neutral-12);
+}
+
+.fluent-table th {
+  font-weight: 600;
+  color: var(--fluent-neutral-90);
+  background: var(--fluent-neutral-4);
+}
+
+.fluent-table tr:hover {
+  background: var(--fluent-neutral-4);
+}
+
+/* 选择框样式 */
+.fluent-select {
+  padding: 8px 32px 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--fluent-neutral-20);
+  border-radius: var(--fluent-radius-4);
+  background: var(--fluent-neutral-0);
+  color: var(--fluent-neutral-90);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236e6e6e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  outline: none;
+}
+
+.fluent-select:hover {
+  border-color: var(--fluent-neutral-30);
+}
+
+.fluent-select:focus {
+  border-color: var(--fluent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+/* 复选框样式 */
+.fluent-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--fluent-neutral-30);
+  border-radius: var(--fluent-radius-2);
+  appearance: none;
+  cursor: pointer;
+  transition: all var(--fluent-duration-fast);
+}
+
+.fluent-checkbox:checked {
+  background: var(--fluent-primary);
+  border-color: var(--fluent-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M2 6l3 3 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.fluent-checkbox:focus {
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+/* 文本域样式 */
+.fluent-textarea {
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid var(--fluent-neutral-20);
+  border-radius: var(--fluent-radius-4);
+  background: var(--fluent-neutral-0);
+  color: var(--fluent-neutral-90);
+  outline: none;
+  resize: vertical;
+  transition: all var(--fluent-duration-fast) var(--fluent-easing);
+}
+
+.fluent-textarea:hover {
+  border-color: var(--fluent-neutral-30);
+}
+
+.fluent-textarea:focus {
+  border-color: var(--fluent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
 }

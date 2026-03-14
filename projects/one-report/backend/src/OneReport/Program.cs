@@ -129,6 +129,14 @@ builder.Services.AddScoped<IDataSourceService, DataSourceService>();
 builder.Services.AddScoped<IApiDataSourceService, ApiDataSourceService>();
 builder.Services.AddScoped<IExportJobQueueService, ExportJobQueueService>();
 
+// M3: 新增服务
+builder.Services.AddScoped<IReportExecutionLogService, ReportExecutionLogService>();
+builder.Services.AddScoped<IQueryResultCacheService, QueryResultCacheService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+
+// HTTP 上下文访问器（用于获取客户端IP等）
+builder.Services.AddHttpContextAccessor();
+
 // ========================================
 // 后台服务注册
 // ========================================
@@ -138,6 +146,9 @@ builder.Services.AddHostedService<ExportJobBackgroundService>();
 // 定时任务清理服务
 // ========================================
 builder.Services.AddHostedService<ExportCleanupBackgroundService>();
+
+// M3: 缓存清理后台服务
+builder.Services.AddHostedService<CacheCleanupBackgroundService>();
 
 // 配置 CORS
 builder.Services.AddCors(options =>
