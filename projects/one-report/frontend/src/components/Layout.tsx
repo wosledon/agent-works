@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
-import { useReportStore } from '../store/index.js';
-import { Eye, EyeOff, ZoomIn, ZoomOut, Grid3x3 } from 'lucide-react';
+import { useReportStore } from '~/store';
+import { Eye, EyeOff, ZoomIn, ZoomOut, Grid3x3, Download, Upload } from 'lucide-react';
+import { useRef } from 'react';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { 
     isPreview, 
     scale, 
@@ -15,7 +17,17 @@ export function Layout({ children }: LayoutProps) {
     togglePreview, 
     setScale,
     toggleSnapToGrid,
+    exportConfig,
+    importConfig,
   } = useReportStore();
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await importConfig(file);
+      e.target.value = ''; // 重置输入
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -73,6 +85,35 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* 导入/导出按钮 */}
+          {!isPreview && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImport}
+                accept=".json"
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                title="导入报表配置"
+              >
+                <Upload className="w-4 h-4" />
+                导入
+              </button>
+              <button
+                onClick={exportConfig}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                title="导出报表配置"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+            </>
+          )}
+          
           <button
             onClick={togglePreview}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${

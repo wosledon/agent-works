@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface PieChartComponentProps {
   props: ComponentProps;
@@ -47,12 +47,12 @@ export function PieChartComponent({ props, style }: PieChartComponentProps) {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               outerRadius={80}
               fill="#8884d8"
               dataKey="value"
             >
-              {sampleData.map((entry, index) => (
+              {sampleData.map((_entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>

@@ -1,4 +1,4 @@
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface TextComponentProps {
   props: ComponentProps;
@@ -6,7 +6,7 @@ interface TextComponentProps {
   isPreview?: boolean;
 }
 
-export function TextComponent({ props, style, isPreview = false }: TextComponentProps) {
+export function TextComponent({ props, style }: TextComponentProps) {
   const { text = '文本内容' } = props;
 
   return (

@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface FilterComponentProps {
   props: ComponentProps;
@@ -7,7 +7,7 @@ interface FilterComponentProps {
 }
 
 export function FilterComponent({ props, style }: FilterComponentProps) {
-  const { placeholder = '请输入筛选条件' } = props;
+  const { placeholder = '请输入筛选条件' } = props as { placeholder?: string };
 
   return (
     <div className="h-full flex items-center"

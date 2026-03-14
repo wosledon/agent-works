@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
-import { useReportStore } from '../../store/index.js';
-import { ComponentRenderer } from '../renderers/index.js';
-import type { ComponentType, ReportComponent } from '../../types/index.js';
+import { useReportStore } from '~/store';
+import { ComponentRenderer } from '~/components/renderers';
+import type { ComponentType, ReportComponent } from '~/types';
 import { Trash2, GripVertical } from 'lucide-react';
 
 export function Canvas() {

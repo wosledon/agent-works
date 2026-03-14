@@ -1,5 +1,5 @@
 import { Calendar } from 'lucide-react';
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface DateRangeComponentProps {
   props: ComponentProps;
@@ -7,7 +7,7 @@ interface DateRangeComponentProps {
 }
 
 export function DateRangeComponent({ props, style }: DateRangeComponentProps) {
-  const { placeholder = '选择日期范围' } = props;
+  const { placeholder = '选择日期范围' } = props as { placeholder?: string };
 
   return (
     <div className="h-full flex items-center"

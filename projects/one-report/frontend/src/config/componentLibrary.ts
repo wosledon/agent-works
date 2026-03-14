@@ -1,4 +1,4 @@
-import type { ComponentLibraryItem } from '../types';
+import type { ComponentLibraryItem } from '~/types';
 
 export const componentLibrary: ComponentLibraryItem[] = [
   {

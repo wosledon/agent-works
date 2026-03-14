@@ -1,5 +1,5 @@
 import { ImageIcon } from 'lucide-react';
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface ImageComponentProps {
   props: ComponentProps;
@@ -7,7 +7,7 @@ interface ImageComponentProps {
 }
 
 export function ImageComponent({ props, style }: ImageComponentProps) {
-  const { src, alt = '图片' } = props;
+  const { src, alt = '图片' } = props as { src?: string; alt?: string };
 
   return (
     <div className="h-full flex items-center justify-center overflow-hidden rounded-lg"
@@ -33,7 +33,7 @@ export function ImageComponent({ props, style }: ImageComponentProps) {
           <span className="text-sm"
             style={{ fontSize: style.fontSize || 14, color: style.color }}
           >
-            {alt}
+            {alt as string}
           </span>
         </div>
       )}

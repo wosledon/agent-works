@@ -9,9 +9,8 @@ import {
   Filter, 
   CalendarRange 
 } from 'lucide-react';
-import { useReportStore } from '../../store/index.js';
-import { componentLibrary, categories } from '../../config/componentLibrary.js';
-import type { ComponentType } from '../../types/index.js';
+import { componentLibrary, categories, type ComponentLibraryItem } from '~/config';
+import type { ComponentType } from '~/types';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Table2,
@@ -29,7 +28,7 @@ export function Sidebar() {
 
   const filteredComponents = activeCategory === 'all'
     ? componentLibrary
-    : componentLibrary.filter(c => c.category === activeCategory);
+    : componentLibrary.filter((c: ComponentLibraryItem) => c.category === activeCategory);
 
   const handleDragStart = (e: React.DragEvent, type: ComponentType) => {
     e.dataTransfer.setData('componentType', type);
@@ -59,7 +58,7 @@ export function Sidebar() {
       
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-2 gap-2">
-          {filteredComponents.map((comp: typeof componentLibrary[0]) => {
+          {filteredComponents.map((comp: ComponentLibraryItem) => {
             const Icon = iconMap[comp.icon];
             return (
               <div

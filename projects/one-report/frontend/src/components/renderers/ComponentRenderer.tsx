@@ -1,4 +1,4 @@
-import type { ReportComponent } from '../../types';
+import type { ReportComponent } from '~/types';
 import { TableComponent } from './TableComponent';
 import { BarChartComponent } from './BarChartComponent';
 import { LineChartComponent } from './LineChartComponent';

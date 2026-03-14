@@ -41,6 +41,12 @@ interface ReportStore {
   setScale: (scale: number) => void;
   toggleSnapToGrid: () => void;
   updateConfig: (updates: Partial<ReportConfig>) => void;
+  
+  // 保存/加载
+  saveConfig: () => string;
+  loadConfig: (json: string) => void;
+  exportConfig: () => void;
+  importConfig: (file: File) => Promise<void>;
 }
 
 const defaultConfig: ReportConfig = {
@@ -297,5 +303,70 @@ export const useReportStore = create<ReportStore>((set, get) => ({
     set((state) => ({
       config: { ...state.config, ...updates, updatedAt: new Date().toISOString() },
     }));
+  },
+  
+  // 保存配置为 JSON 字符串
+  saveConfig: () => {
+    const { config } = get();
+    return JSON.stringify(config, null, 2);
+  },
+  
+  // 从 JSON 字符串加载配置
+  loadConfig: (json) => {
+    try {
+      const parsed = JSON.parse(json) as ReportConfig;
+      set({
+        config: {
+          ...parsed,
+          updatedAt: new Date().toISOString(),
+        },
+        selectedComponentId: null,
+      });
+    } catch (error) {
+      console.error('Failed to load config:', error);
+      alert('加载报表配置失败，请检查文件格式');
+    }
+  },
+  
+  // 导出配置为文件
+  exportConfig: () => {
+    const { config } = get();
+    const json = JSON.stringify(config, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${config.name || 'report'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+  
+  // 从文件导入配置
+  importConfig: async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const parsed = JSON.parse(content) as ReportConfig;
+          set({
+            config: {
+              ...parsed,
+              updatedAt: new Date().toISOString(),
+            },
+            selectedComponentId: null,
+          });
+          resolve();
+        } catch (error) {
+          console.error('Failed to import config:', error);
+          alert('导入报表配置失败，请检查文件格式');
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
   },
 }));

@@ -1,20 +1,17 @@
 import { useState } from 'react';
-import { useReportStore } from '../../store';
-import { ComponentRenderer } from '../renderers';
+import { useReportStore } from '~/store';
 import { 
   Type, 
-  Palette, 
   Layout, 
   Database,
   Trash2,
   Edit3,
   Plus,
-  Server,
   FileText,
   Globe,
   Database as DatabaseIcon
 } from 'lucide-react';
-import type { DataSource } from '../../types';
+import type { DataSource, ReportComponent } from '~/types';
 
 export function PropertyPanel() {
   const [activeTab, setActiveTab] = useState<'properties' | 'data' | 'canvas'>('properties');
@@ -35,9 +32,12 @@ export function PropertyPanel() {
     updateConfig,
   } = useReportStore();
 
-  const { components, dataSources, gridSize, showGrid, snapToGrid } = config;
+  const { components, dataSources } = config;
+  const snapToGridValue = useReportStore((state: { snapToGrid: boolean }) => state.snapToGrid);
+  // 使用 void 表达式来避免未使用变量的警告
+  void snapToGridValue;
   
-  const selectedComponent = components.find(c => c.id === selectedComponentId);
+  const selectedComponent = components.find((c: ReportComponent) => c.id === selectedComponentId);
 
   const handleAddDataSource = () => {
     setEditingDataSource(null);
@@ -126,16 +126,15 @@ export function PropertyPanel() {
   );
 }
 
-// 组件属性面板
 interface ComponentPropertiesProps {
-  component: NonNullable<ReturnType<typeof useReportStore.getState>['config']['components'][0]>;
+  component: ReportComponent;
   onUpdateProps: (id: string, props: Record<string, unknown>) => void;
   onUpdateStyle: (id: string, style: Record<string, unknown>) => void;
   onRemove: (id: string) => void;
 }
 
 function ComponentProperties({ component, onUpdateProps, onUpdateStyle, onRemove }: ComponentPropertiesProps) {
-  const { props, style, type } = component;
+  const { props, style } = component;
 
   return (
     <div className="space-y-6">
@@ -158,7 +157,7 @@ function ComponentProperties({ component, onUpdateProps, onUpdateStyle, onRemove
             <label className="text-xs text-gray-600 dark:text-gray-300">标题</label>
             <input
               type="text"
-              value={props.title || ''}
+              value={(props.title as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { title: e.target.value })}
               className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
             />
@@ -169,7 +168,7 @@ function ComponentProperties({ component, onUpdateProps, onUpdateStyle, onRemove
           <div>
             <label className="text-xs text-gray-600 dark:text-gray-300">文本内容</label>
             <textarea
-              value={props.text || ''}
+              value={(props.text as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { text: e.target.value })}
               rows={3}
               className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 resize-none"
@@ -182,7 +181,7 @@ function ComponentProperties({ component, onUpdateProps, onUpdateStyle, onRemove
             <label className="text-xs text-gray-600 dark:text-gray-300">占位符</label>
             <input
               type="text"
-              value={props.placeholder || ''}
+              value={(props.placeholder as string) || ''}
               onChange={(e) => onUpdateProps(component.id, { placeholder: e.target.value })}
               className="w-full mt-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
             />
@@ -304,7 +303,7 @@ interface DataSourcePanelProps {
 }
 
 function DataSourcePanel({ dataSources, onAdd, onEdit, onRemove }: DataSourcePanelProps) {
-  const typeIcons: Record<DataSource['type'], React.ComponentType> = {
+  const typeIcons: Record<DataSource['type'], React.ComponentType<{ className?: string }>> = {
     api: Globe,
     static: FileText,
     file: FileText,
@@ -372,7 +371,7 @@ function DataSourcePanel({ dataSources, onAdd, onEdit, onRemove }: DataSourcePan
 // 画布设置
 interface CanvasSettingsProps {
   config: ReturnType<typeof useReportStore.getState>['config'];
-  onUpdate: (updates: Partial<typeof config>) => void;
+  onUpdate: (updates: Partial<ReturnType<typeof useReportStore.getState>['config']>) => void;
 }
 
 function CanvasSettings({ config, onUpdate }: CanvasSettingsProps) {

@@ -1,4 +1,4 @@
-import type { ComponentProps, ComponentStyle } from '../../types';
+import type { ComponentProps, ComponentStyle } from '~/types';
 
 interface TableComponentProps {
   props: ComponentProps;
