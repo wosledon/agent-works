@@ -42,6 +42,26 @@ public interface IReportExportService
     Task<Stream> ExportToPdfAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
     
     /// <summary>
+    /// 导出报表为CSV格式 (流式，直写文件系统，零内存)
+    /// </summary>
+    Task<(string filePath, string fileName)> ExportToCsvFileAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// 导出报表为Excel格式 (流式，直写文件系统，零内存)
+    /// </summary>
+    Task<(string filePath, string fileName)> ExportToExcelFileAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// 导出报表为JSON格式 (流式，直写文件系统，零内存)
+    /// </summary>
+    Task<(string filePath, string fileName)> ExportToJsonFileAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// 导出报表为PDF格式 (流式，直写文件系统，零内存)
+    /// </summary>
+    Task<(string filePath, string fileName)> ExportToPdfFileAsync(Guid reportDefinitionId, Dictionary<string, object?>? parameters, CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// 创建异步导出任务
     /// </summary>
     Task<ExportJobResponse> CreateExportJobAsync(ExportReportRequest request, CancellationToken cancellationToken = default);

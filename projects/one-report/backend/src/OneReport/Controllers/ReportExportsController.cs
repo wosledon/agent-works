@@ -25,7 +25,7 @@ public class ReportExportsController : ControllerBase
     }
 
     /// <summary>
-    /// 导出报表 (同步流式下载)
+    /// 导出报表 (同步流式下载，直写文件系统，零内存)
     /// </summary>
     [HttpPost("download")]
     public async Task<IActionResult> Download(
@@ -37,19 +37,22 @@ public class ReportExportsController : ControllerBase
             var format = request.Format.ToLower();
             var contentType = GetContentType(format);
             var fileExtension = GetFileExtension(format);
-            var fileName = $"{request.FileName ?? "report"}_{DateTime.UtcNow:yyyyMMddHHmmss}{fileExtension}";
 
-            Stream stream = format switch
+            // 使用文件系统直写方法，零内存占用
+            var (filePath, fileName) = format switch
             {
-                "csv" => await _exportService.ExportToCsvAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
-                "excel" or "xlsx" => await _exportService.ExportToExcelAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
-                "json" => await _exportService.ExportToJsonAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
-                "pdf" => await _exportService.ExportToPdfAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
+                "csv" => await _exportService.ExportToCsvFileAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
+                "excel" or "xlsx" => await _exportService.ExportToExcelFileAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
+                "json" => await _exportService.ExportToJsonFileAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
+                "pdf" => await _exportService.ExportToPdfFileAsync(request.ReportDefinitionId, request.Parameters, cancellationToken),
                 _ => throw new NotSupportedException($"不支持的导出格式: {request.Format}")
             };
 
-            _logger.LogInformation("报表导出下载: {ReportId}, 格式: {Format}", request.ReportDefinitionId, format);
+            _logger.LogInformation("报表导出下载: {ReportId}, 格式: {Format}, 文件: {FilePath}", 
+                request.ReportDefinitionId, format, filePath);
 
+            // 打开文件流并返回，使用 FileStreamResult 会自动处理流关闭
+            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Delete, 8192, FileOptions.Asynchronous | FileOptions.DeleteOnClose);
             return File(stream, contentType, fileName);
         }
         catch (Exception ex)

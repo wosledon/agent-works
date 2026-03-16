@@ -592,6 +592,267 @@ public class ReportExportService : IReportExportService
         return (dbFileName, dbStream);
     }
 
+    #region 文件系统直写方法（零内存占用）
+
+    /// <summary>
+    /// CSV 导出 - 直写文件系统，零内存占用
+    /// </summary>
+    public async Task<(string filePath, string fileName)> ExportToCsvFileAsync(
+        Guid reportDefinitionId,
+        Dictionary<string, object?>? parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
+        var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
+        
+        var fileName = $"{report.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+        var filePath = GetTempFilePath(fileName);
+        
+        long recordCount = 0;
+        
+        await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, FileOptions.Asynchronous))
+        using (var writer = new StreamWriter(fileStream, Encoding.UTF8))
+        using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = true }))
+        {
+            // 写入表头
+            foreach (var col in columns)
+            {
+                csv.WriteField(col.DisplayName);
+            }
+            await csv.NextRecordAsync();
+            
+            // 流式写入数据
+            await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
+            {
+                foreach (var col in columns)
+                {
+                    var value = row.GetValueOrDefault(col.FieldName);
+                    csv.WriteField(FormatValue(value, col.Format));
+                }
+                await csv.NextRecordAsync();
+                recordCount++;
+                
+                if (recordCount % StreamBatchSize == 0)
+                {
+                    await csv.FlushAsync();
+                    _logger.LogDebug("CSV文件导出进度: {Count} 条记录", recordCount);
+                }
+            }
+            
+            await writer.FlushAsync();
+        }
+        
+        _logger.LogInformation("CSV文件导出完成: {FilePath}, 共 {Count} 条记录", filePath, recordCount);
+        return (filePath, fileName);
+    }
+
+    /// <summary>
+    /// Excel 导出 - 直写文件系统，零内存占用
+    /// </summary>
+    public async Task<(string filePath, string fileName)> ExportToExcelFileAsync(
+        Guid reportDefinitionId,
+        Dictionary<string, object?>? parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
+        var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
+        
+        var fileName = $"{report.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+        var filePath = GetTempFilePath(fileName);
+        
+        long recordCount = 0;
+        
+        using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, FileOptions.Asynchronous))
+        using (var document = SpreadsheetDocument.Create(fileStream, SpreadsheetDocumentType.Workbook, true))
+        {
+            var workbookPart = document.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
+            
+            var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+            stylesPart.Stylesheet = CreateStylesheet();
+            
+            var sharedStringPart = workbookPart.AddNewPart<SharedStringTablePart>();
+            var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+            
+            using (var writer = OpenXmlWriter.Create(worksheetPart))
+            {
+                writer.WriteStartElement(new Worksheet());
+                writer.WriteStartElement(new SheetData());
+                
+                // 表头
+                writer.WriteStartElement(new Row { RowIndex = 1 });
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    var cell = new Cell
+                    {
+                        CellReference = GetCellReference(1, i + 1),
+                        CellValue = new CellValue(columns[i].DisplayName),
+                        DataType = CellValues.String,
+                        StyleIndex = 1
+                    };
+                    writer.WriteElement(cell);
+                }
+                writer.WriteEndElement();
+                
+                // 数据行
+                uint rowIndex = 2;
+                await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
+                {
+                    writer.WriteStartElement(new Row { RowIndex = rowIndex });
+                    
+                    for (int colIndex = 0; colIndex < columns.Count; colIndex++)
+                    {
+                        var col = columns[colIndex];
+                        var value = row.GetValueOrDefault(col.FieldName);
+                        var cell = CreateCell(rowIndex, colIndex + 1, value, col.DataType);
+                        writer.WriteElement(cell);
+                    }
+                    
+                    writer.WriteEndElement();
+                    recordCount++;
+                    rowIndex++;
+                    
+                    if (recordCount % 10000 == 0)
+                    {
+                        _logger.LogDebug("Excel文件导出进度: {Count} 条记录", recordCount);
+                    }
+                    
+                    if (rowIndex > 1_000_001) break;
+                }
+                
+                writer.WriteEndElement();
+                writer.WriteEndElement();
+            }
+            
+            SaveSharedStringTable(sharedStringPart);
+            
+            workbookPart.Workbook.AppendChild(new Sheets());
+            workbookPart.Workbook.GetFirstChild<Sheets>()?.AppendChild(new Sheet
+            {
+                Id = workbookPart.GetIdOfPart(worksheetPart),
+                SheetId = 1,
+                Name = report.Name.Length > 31 ? report.Name[..31] : report.Name
+            });
+            
+            workbookPart.Workbook.Save();
+        }
+        
+        _logger.LogInformation("Excel文件导出完成: {FilePath}, 共 {Count} 条记录", filePath, recordCount);
+        return (filePath, fileName);
+    }
+
+    /// <summary>
+    /// JSON 导出 - 直写文件系统，零内存占用
+    /// </summary>
+    public async Task<(string filePath, string fileName)> ExportToJsonFileAsync(
+        Guid reportDefinitionId,
+        Dictionary<string, object?>? parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
+        var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
+        
+        var fileName = $"{report.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+        var filePath = GetTempFilePath(fileName);
+        
+        long recordCount = 0;
+        
+        await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, FileOptions.Asynchronous))
+        {
+            await fileStream.WriteAsync(Encoding.UTF8.GetBytes("["), cancellationToken);
+            
+            bool first = true;
+            await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
+            {
+                if (!first)
+                {
+                    await fileStream.WriteAsync(Encoding.UTF8.GetBytes(","), cancellationToken);
+                }
+                first = false;
+                
+                var jsonObj = new Dictionary<string, object?>();
+                foreach (var col in columns)
+                {
+                    jsonObj[col.FieldName] = row.GetValueOrDefault(col.FieldName);
+                }
+                
+                var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(jsonObj));
+                await fileStream.WriteAsync(jsonBytes, cancellationToken);
+                
+                recordCount++;
+            }
+            
+            await fileStream.WriteAsync(Encoding.UTF8.GetBytes("]"), cancellationToken);
+            await fileStream.FlushAsync(cancellationToken);
+        }
+        
+        _logger.LogInformation("JSON文件导出完成: {FilePath}, 共 {Count} 条记录", filePath, recordCount);
+        return (filePath, fileName);
+    }
+
+    /// <summary>
+    /// PDF 导出 - 直写文件系统
+    /// </summary>
+    public async Task<(string filePath, string fileName)> ExportToPdfFileAsync(
+        Guid reportDefinitionId,
+        Dictionary<string, object?>? parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var report = await GetReportDefinitionAsync(reportDefinitionId, cancellationToken);
+        var columns = report.Columns.Where(c => c.IsVisible).OrderBy(c => c.DisplayOrder).ToList();
+        
+        var fileName = $"{report.Name}_{DateTime.UtcNow:yyyyMMddHHmmss}.pdf";
+        var filePath = GetTempFilePath(fileName);
+        
+        // 收集数据（PDF需要全部数据在内存中生成）
+        var data = new List<Dictionary<string, object?>>();
+        long recordCount = 0;
+        await foreach (var row in _dataService.StreamDataAsync(reportDefinitionId, parameters, cancellationToken))
+        {
+            data.Add(row);
+            recordCount++;
+            if (recordCount >= 10000) break;
+        }
+        
+        QuestPDF.Settings.License = LicenseType.Community;
+        
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4.Landscape());
+                page.Margin(20);
+                page.Header().Element(header => BuildHeader(header, report.Name, columns));
+                page.Content().Element(content => BuildTableContent(content, columns, data));
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.Span("第 ");
+                    text.CurrentPageNumber();
+                    text.Span(" 页 / 共 ");
+                    text.TotalPages();
+                    text.Span(" 页");
+                });
+            });
+        });
+        
+        document.GeneratePdf(filePath);
+        
+        _logger.LogInformation("PDF文件导出完成: {FilePath}, 共 {Count} 条记录", filePath, recordCount);
+        return (filePath, fileName);
+    }
+
+    /// <summary>
+    /// 获取临时文件路径
+    /// </summary>
+    private string GetTempFilePath(string fileName)
+    {
+        var exportsDir = Path.Combine(_environment.WebRootPath ?? Path.GetTempPath(), "exports");
+        Directory.CreateDirectory(exportsDir);
+        return Path.Combine(exportsDir, fileName);
+    }
+
+    #endregion
+
     #region 私有方法
 
     private async Task<ReportDefinition> GetReportDefinitionAsync(Guid id, CancellationToken ct)
